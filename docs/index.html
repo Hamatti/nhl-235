@@ -3,64 +3,111 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>235 - CLI tool for NHL fans</title>
-    <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap" rel="stylesheet">
+    <title>235 - hockey results with a familiar feel</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap"
+      rel="stylesheet"
+    />
 
+    <meta
+      property="og:title"
+      content="235 - hockey results with a familiar feel"
+    />
+    <meta property="og:url" content="https://hamatti.github.io/nhl-235" />
+    <meta
+      property="og:description"
+      content="A CLI tool to get NHL results to your terminal with a familiar 235 feeling"
+    />
+    <meta
+      property="og:image"
+      content="https://hamatti.github.io/nhl-235-banner.png"
+    />
 
     <style>
-        body {
-            background: black;
-            color: white;
-            font-size: 30px;
-            font-family: "Fira Code", monospace;
-        }
+      body {
+        background: black;
+        color: white;
+        font-size: 30px;
+        font-family: "Fira Code", monospace;
+      }
 
-        main {
-            text-align: center;
-            width: 60%;
-            margin: auto;
-        }
-        img {
-            display: block;
-            margin: auto;
-
-        }
-        pre {
-            background: #ccc; color: black; width: 80%; display: block; margin: auto; text-align: left;
-            padding: 0.5em;
-            font-size: 0.7em;
-        }
-        a, a:visited {
-            color: white;
-        }
+      main {
+        text-align: center;
+        width: 60%;
+        margin: auto;
+      }
+      img {
+        display: block;
+        margin: auto;
+      }
+      pre {
+        background: #ccc;
+        color: black;
+        width: 80%;
+        display: block;
+        margin: auto;
+        text-align: left;
+        padding: 0.5em;
+        font-size: 0.7em;
+      }
+      a,
+      a:visited {
+        color: white;
+      }
     </style>
   </head>
   <body>
     <main>
-      <img src="235.png" alt="Screenshot of 235 output with results of multiple matches" />
+      <img
+        src="nhl-235-banner.png"
+        alt="235 - hockey results with a familiar feel "
+      />
       <h1 style="margin-bottom: -2%">235</h1>
-      <p style="font-size: 0.8em" >A CLI tool for NHL fans</p>
+      <p style="font-size: 0.8em">hockey results with a familiar feel</p>
 
       <p>
-          Inspired by the visual aesthetics of YLE Teksti-tv's classic 235 page, I built a command line tool to give you the same feeling.
+        For decades, 235 has been part of a morning routine for countless
+        Finnish hockey fans. This project has been inspired by the work done by
+        YLE Tekstitv team in providing hockey fans NHL results each night and
+        morning.
       </p>
-<hr>
+      <hr />
+      <h2>Install:</h2>
+      <h3>with <a href="https://crates.io/">Rust</a></h3>
+      <pre><code>cargo install nhl-235</code></pre>
+      <pre><code>ln -s ~/.cargo/bin/nhl-235 /usr/local/bin/235</code></pre>
+      <h3>from Github</h3>
       <p>
-          <h2>Install:</h2>
-          <h3>with <a href="https://crates.io/">Rust</a></h3>
-          <pre ><code>cargo install nhl-235</code></pre>
-          <pre ><code>ln -s ~/.cargo/bin/nhl-235 /usr/local/bin/235</code></pre>
-          <h3>from Github</h3>
-          <p><a href="https://github.com/Hamatti/nhl-235/releases/tag/0.1.0">Download binaries from GitHub</a>.</p>
+        <a href="https://github.com/Hamatti/nhl-235/releases/latest"
+          >Download binaries from GitHub</a
+        >
       </p>
-      <hr>
-      <p><h2>Source:</h2></p>
+      <hr />
+      <p></p>
+
+      <h2>Usage:</h2>
+      <pre><code>235</code></pre>
+      <img style="margin-top: 1em; width: 100%" src="235.png" />
+
+      <hr />
+      <h2>Source:</h2>
+      <p><a href="https://crates.io/crates/nhl-235">crates.io/nhl-235</a></p>
       <p><a href="https://github.com/hamatti/nhl-235/">hamatti/nhl-235</a></p>
-      <hr>
-      <p><h2>Acknowledgements:</h2></p>
-      <p>This tool uses <a href="https://github.com/peruukki/nhl-score-api">peruukki/nhl-score-api</a>.</p>
-      <p>Development of 235 has been a grateful recipient of the <a href="https://spiceprogram.org">Futurice Open Source sponsorship program.</a></p>
+      <hr />
+      <h2>Acknowledgements:</h2>
+      <p>
+        This tool uses
+        <a href="https://github.com/peruukki/nhl-score-api"
+          >peruukki/nhl-score-api</a
+        >.
+      </p>
+      <p>
+        Development of 235 has been a grateful recipient of the
+        <a href="https://spiceprogram.org">
+          Futurice Open Source sponsorship program</a
+        >.
+      </p>
     </main>
   </body>
 </html>
