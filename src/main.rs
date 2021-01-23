@@ -264,58 +264,47 @@ fn print_game(game: &Game) {
 }
 
 fn print_full(home: &Goal, away: &Goal) {
+    let home_message = format!("{:<15} {:>2} ", home.scorer, home.minute);
     if home.special {
-        magenta!("{:<15} {:>2} ", home.scorer, home.minute);
+        magenta!("{}", home_message);
     } else if home.finn {
-        green!("{:<15} {:>2} ", home.scorer, home.minute);
+        green!("{}", home_message);
     } else {
-        cyan!("{:<15} {:>2} ", home.scorer, home.minute);
+        cyan!("{}", home_message);
     }
 
+    let away_message = format!("{:<15} {:>2}", away.scorer, away.minute);
     if away.special {
-        magenta_ln!("{:<15} {:>2}", away.scorer, away.minute);
+        magenta_ln!("{}", away_message);
     } else if away.finn {
-        green_ln!("{:<15} {:>2}", away.scorer, away.minute);
+        green_ln!("{}", away_message);
     } else {
-        cyan_ln!("{:<15} {:>2}", away.scorer, away.minute);
+        cyan_ln!("{}", away_message);
     }
 }
 
 fn print_left(home: &Goal) {
+    let message = format!("{:<15} {:>2}", home.scorer, home.minute);
     if home.special {
-        magenta_ln!("{:<15} {:>2}", home.scorer, home.minute);
+        magenta_ln!("{}", message);
     } else if home.finn {
-        green_ln!("{:<15} {:>2}", home.scorer, home.minute);
+        green_ln!("{}", message);
     } else {
-        cyan_ln!("{:<15} {:>2}", home.scorer, home.minute);
+        cyan_ln!("{}", message);
     }
 }
 
 fn print_right(away: &Goal) {
+    let message = format!(
+        "{:<15} {:>2} {:<15} {:>2}",
+        "", "", away.scorer, away.minute
+    );
     if away.special {
-        magenta_ln!(
-            "{:<15} {:>2} {:<15} {:>2}",
-            "",
-            "",
-            away.scorer,
-            away.minute
-        );
+        magenta_ln!("{}", message);
     } else if away.finn {
-        green_ln!(
-            "{:<15} {:>2} {:<15} {:>2}",
-            "",
-            "",
-            away.scorer,
-            away.minute
-        );
+        green_ln!("{}", message);
     } else {
-        cyan_ln!(
-            "{:<15} {:>2} {:<15} {:>2}",
-            "",
-            "",
-            away.scorer,
-            away.minute
-        );
+        cyan_ln!("{}", message);
     }
 }
 
