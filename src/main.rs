@@ -176,13 +176,19 @@ fn print_game(game: &Game) {
     let home_scores: Vec<&Goal> = game
         .goals
         .iter()
-        .filter(|goal| goal.team == (&game).home)
+        .filter(|goal| goal.team == (&game).home && goal.minute != 65)
         .collect::<Vec<&Goal>>();
     let away_scores: Vec<&Goal> = game
         .goals
         .iter()
-        .filter(|goal| goal.team == (&game).away)
+        .filter(|goal| goal.team == (&game).away && goal.minute != 65)
         .collect::<Vec<&Goal>>();
+
+    let mut shootout_scorer = None;
+
+    if game.special == "so" {
+        shootout_scorer = Some(game.goals.iter().last().unwrap());
+    }
 
     // Print header
     white!(
@@ -205,6 +211,17 @@ fn print_game(game: &Game) {
             Both(l, r) => print_full(l, r),
             Left(l) => print_left(l),
             Right(r) => print_right(r),
+        }
+    }
+
+    // Game-winning shootout goal is always on its own line because
+    // the game must be tied before it so it's safe to print it after everything.
+    // If we later add assists by Finns, this needs to be rewritten.
+    if let Some(so) = shootout_scorer {
+        if so.team == game.home {
+            print_left(so)
+        } else {
+            print_right(so)
         }
     }
 }
