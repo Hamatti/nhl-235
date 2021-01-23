@@ -12,6 +12,7 @@
 extern crate colour;
 use reqwest::Error;
 use serde_json;
+use structopt::StructOpt;
 
 use itertools::{EitherOrBoth::*, Itertools};
 
@@ -35,11 +36,22 @@ struct Game {
     special: String,
 }
 
+#[derive(StructOpt, Debug)]
+struct Cli {
+    #[structopt(long)]
+    version: bool,
+}
+
 fn main() {
-    match api() {
-        Ok(_) => (),
-        Err(err) => println!("{:?}", err),
-    };
+    let args = Cli::from_args();
+    if args.version {
+        println!("{}", env!("CARGO_PKG_VERSION"));
+    } else {
+        match api() {
+            Ok(_) => (),
+            Err(err) => println!("{:?}", err),
+        };
+    }
 }
 
 fn translate_team_name(abbr: &str) -> String {
