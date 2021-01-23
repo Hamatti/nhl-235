@@ -610,7 +610,7 @@ dependencies = [
 
 [[package]]
 name = "nhl-235"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "colour",
  "itertools",
