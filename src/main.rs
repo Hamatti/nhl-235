@@ -350,4 +350,121 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn it_parses_full_live_game_data_correctly() -> serde_json::Result<()> {
+        let test_game = serde_json::from_str(
+            r#"{"status":{"state":"LIVE","progress":{"currentPeriod":3,"currentPeriodOrdinal":"3rd","currentPeriodTimeRemaining":{"min":12,"sec":21,"pretty":"12:21"}}},"startTime":"2021-01-23T19:00:00Z","goals":[{"team":"TBL","period":"1","scorer":{"player":"Victor Hedman","seasonTotal":1},"assists":[{"player":"Mitchell Stephens","seasonTotal":1},{"player":"Alexander Volkov","seasonTotal":1}],"min":4,"sec":10},{"team":"CBJ","period":"1","scorer":{"player":"Nick Foligno","seasonTotal":3},"assists":[{"player":"Cam Atkinson","seasonTotal":2},{"player":"Michael Del Zotto","seasonTotal":4}],"min":4,"sec":27},{"team":"CBJ","period":"1","scorer":{"player":"Mikhail Grigorenko","seasonTotal":1},"assists":[{"player":"Kevin Stenlund","seasonTotal":1},{"player":"Nathan Gerbe","seasonTotal":1}],"min":10,"sec":3},{"team":"CBJ","period":"1","scorer":{"player":"Vladislav Gavrikov","seasonTotal":1},"assists":[{"player":"Liam Foudy","seasonTotal":2},{"player":"Eric Robinson","seasonTotal":1}],"min":19,"sec":1},{"team":"TBL","period":"1","scorer":{"player":"Ondrej Palat","seasonTotal":3},"assists":[{"player":"Brayden Point","seasonTotal":3},{"player":"Victor Hedman","seasonTotal":4}],"min":19,"sec":46,"strength":"PPG"},{"team":"CBJ","period":"3","scorer":{"player":"Zach Werenski","seasonTotal":1},"assists":[{"player":"Alexandre Texier","seasonTotal":2},{"player":"Boone Jenner","seasonTotal":2}],"min":6,"sec":34}],"scores":{"TBL":2,"CBJ":4},"teams":{"away":{"abbreviation":"TBL","id":14,"locationName":"Tampa Bay","shortName":"Tampa Bay","teamName":"Lightning"},"home":{"abbreviation":"CBJ","id":29,"locationName":"Columbus","shortName":"Columbus","teamName":"Blue Jackets"}},"preGameStats":{"records":{"TBL":{"wins":3,"losses":0,"ot":0},"CBJ":{"wins":1,"losses":2,"ot":2}}},"currentStats":{"records":{"TBL":{"wins":3,"losses":0,"ot":0},"CBJ":{"wins":1,"losses":2,"ot":2}},"streaks":{"TBL":{"type":"WINS","count":3},"CBJ":{"type":"OT","count":2}},"standings":{"TBL":{"divisionRank":"1","leagueRank":"1"},"CBJ":{"divisionRank":"7","leagueRank":"24"}}}}"#,
+        )?;
+
+        let parsed_game = parse_game(&test_game);
+
+        assert_eq!(parsed_game.home, "CBJ");
+        assert_eq!(parsed_game.away, "TBL");
+        assert_eq!(parsed_game.score, "4-2");
+        assert_eq!(parsed_game.goals.len(), 6);
+        assert_eq!(parsed_game.status, "LIVE");
+        assert_eq!(parsed_game.special, "");
+
+        Ok(())
+    }
+
+    #[test]
+    fn it_parses_full_overtime_game_data_correctly() -> serde_json::Result<()> {
+        let test_game = serde_json::from_str(
+            r#"
+            {
+                "status":{
+                    "state":"FINAL"
+                },
+                "startTime":"2021-01-23T19:00:00Z",
+                "goals":[
+                    {
+                        "team":"TOR",
+                        "period":"1",
+                        "scorer":{
+                            "player":"Mitch Marner",
+                            "seasonTotal":1
+                        },
+                        "assists":[
+                            {
+                                "player":"Mitchell Stephens",
+                                "seasonTotal":1
+                            },
+                            {
+                                "player":"Alexander Volkov",
+                                "seasonTotal":1
+                            }
+                        ],
+                        "min":4,
+                        "sec":10
+                    },
+                    {
+                        "team":"PIT",
+                        "period":"3",
+                        "scorer":{
+                            "player":"Sidney Crosby",
+                            "seasonTotal":3
+                        },
+                        "assists":[
+                            {
+                                "player":"Evgeni Malkin",
+                                "seasonTotal":2
+                            }
+                        ],
+                        "min":4,
+                        "sec":27
+                    },
+                    {
+                        "team":"PIT",
+                        "period":"OT",
+                        "scorer":{
+                            "player":"Sidney Crosby",
+                            "seasonTotal":4
+                        },
+                        "assists":[],
+                        "min":3,
+                        "sec":0
+                    }],
+                    "scores":{
+                        "PIT":2,"TOR":1
+                    },
+                    "teams":{
+                        "away":{
+                            "abbreviation":"PIT",
+                            "id":14,
+                            "locationName":"Pittsburgh",
+                            "shortName":"Pittsburgh",
+                            "teamName":"Penguins"
+                        },
+                        "home":{
+                            "abbreviation":"TOR",
+                            "id":29,
+                            "locationName":"Toronto",
+                            "shortName":"Toronto",
+                            "teamName":"Maple Leafs"
+                        }
+                    },
+                    "preGameStats":{"records":{"PIT":{"wins":3,"losses":0,"ot":0},"TOR":{"wins":1,"losses":2,"ot":2}}},
+                    "currentStats":{"records":{"PIT":{"wins":4,"losses":0,"ot":0},"TOR":{"wins":1,"losses":2,"ot":3}},
+                    "streaks":{"PIT":{"type":"WINS","count":3},"TOR":{"type":"OT","count":2}},
+                    "standings":{
+                        "PIT":{"divisionRank":"1","leagueRank":"1"},
+                        "CBJ":{"divisionRank":"7","leagueRank":"24"}
+                    }
+                }
+            }"#,
+        )?;
+
+        let parsed_game = parse_game(&test_game);
+
+        assert_eq!(parsed_game.home, "TOR");
+        assert_eq!(parsed_game.away, "PIT");
+        assert_eq!(parsed_game.score, "1-2");
+        assert_eq!(parsed_game.goals.len(), 3);
+        assert_eq!(parsed_game.status, "FINAL");
+        assert_eq!(parsed_game.special, "ot");
+
+        Ok(())
+    }
 }
