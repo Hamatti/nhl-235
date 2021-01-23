@@ -316,4 +316,27 @@ mod tests {
         assert_eq!(format_minute(0, "3"), 40);
         assert_eq!(format_minute(0, "OT"), 60);
     }
+
+    #[test]
+    fn is_special_works() -> serde_json::Result<()> {
+        let first = r#"{ "period": "1" }"#;
+        let second = r#"{ "period": "2" }"#;
+        let third = r#"{ "period": "3" }"#;
+        let overtime = r#"{ "period": "OT" }"#;
+        let shootout = r#"{ "period": "SO" }"#;
+
+        let game1: serde_json::Value = serde_json::from_str(&first)?;
+        let game2: serde_json::Value = serde_json::from_str(&second)?;
+        let game3: serde_json::Value = serde_json::from_str(&third)?;
+        let game4: serde_json::Value = serde_json::from_str(&overtime)?;
+        let game5: serde_json::Value = serde_json::from_str(&shootout)?;
+
+        assert_eq!(is_special(&game1), false);
+        assert_eq!(is_special(&game2), false);
+        assert_eq!(is_special(&game3), false);
+        assert_eq!(is_special(&game4), true);
+        assert_eq!(is_special(&game5), true);
+
+        Ok(())
+    }
 }
