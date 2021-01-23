@@ -105,10 +105,11 @@ async fn api() -> Result<(), Error> {
 
     let _results = itergames
         .map(|game| parse_game(&game))
-        .collect::<Vec<Game>>();
+        .collect::<Vec<Option<Game>>>();
 
-    _results.into_iter().for_each(|game| {
-        print_game(&game);
+    _results.into_iter().for_each(|game| match game {
+        Some(game) => print_game(&game),
+        None => (),
     });
 
     Ok(())
@@ -136,9 +137,17 @@ fn is_special(goal: &serde_json::Value) -> bool {
     }
 }
 
-fn parse_game(game_json: &serde_json::Value) -> Game {
+fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
+    if (&game_json["teams"]).is_null() {
+        return None;
+    }
     let home_team = &game_json["teams"]["home"]["abbreviation"].as_str().unwrap();
     let away_team = &game_json["teams"]["away"]["abbreviation"].as_str().unwrap();
+
+    if (&game_json["scores"]).is_null() {
+        return None;
+    }
+
     let home_score = &game_json["scores"][home_team];
     let away_score = &game_json["scores"][away_team];
 
@@ -196,7 +205,7 @@ fn parse_game(game_json: &serde_json::Value) -> Game {
         special: String::from(special_str),
     };
 
-    game
+    Some(game)
 }
 
 fn print_game(game: &Game) {
@@ -357,7 +366,7 @@ mod tests {
             r#"{"status":{"state":"LIVE","progress":{"currentPeriod":3,"currentPeriodOrdinal":"3rd","currentPeriodTimeRemaining":{"min":12,"sec":21,"pretty":"12:21"}}},"startTime":"2021-01-23T19:00:00Z","goals":[{"team":"TBL","period":"1","scorer":{"player":"Victor Hedman","seasonTotal":1},"assists":[{"player":"Mitchell Stephens","seasonTotal":1},{"player":"Alexander Volkov","seasonTotal":1}],"min":4,"sec":10},{"team":"CBJ","period":"1","scorer":{"player":"Nick Foligno","seasonTotal":3},"assists":[{"player":"Cam Atkinson","seasonTotal":2},{"player":"Michael Del Zotto","seasonTotal":4}],"min":4,"sec":27},{"team":"CBJ","period":"1","scorer":{"player":"Mikhail Grigorenko","seasonTotal":1},"assists":[{"player":"Kevin Stenlund","seasonTotal":1},{"player":"Nathan Gerbe","seasonTotal":1}],"min":10,"sec":3},{"team":"CBJ","period":"1","scorer":{"player":"Vladislav Gavrikov","seasonTotal":1},"assists":[{"player":"Liam Foudy","seasonTotal":2},{"player":"Eric Robinson","seasonTotal":1}],"min":19,"sec":1},{"team":"TBL","period":"1","scorer":{"player":"Ondrej Palat","seasonTotal":3},"assists":[{"player":"Brayden Point","seasonTotal":3},{"player":"Victor Hedman","seasonTotal":4}],"min":19,"sec":46,"strength":"PPG"},{"team":"CBJ","period":"3","scorer":{"player":"Zach Werenski","seasonTotal":1},"assists":[{"player":"Alexandre Texier","seasonTotal":2},{"player":"Boone Jenner","seasonTotal":2}],"min":6,"sec":34}],"scores":{"TBL":2,"CBJ":4},"teams":{"away":{"abbreviation":"TBL","id":14,"locationName":"Tampa Bay","shortName":"Tampa Bay","teamName":"Lightning"},"home":{"abbreviation":"CBJ","id":29,"locationName":"Columbus","shortName":"Columbus","teamName":"Blue Jackets"}},"preGameStats":{"records":{"TBL":{"wins":3,"losses":0,"ot":0},"CBJ":{"wins":1,"losses":2,"ot":2}}},"currentStats":{"records":{"TBL":{"wins":3,"losses":0,"ot":0},"CBJ":{"wins":1,"losses":2,"ot":2}},"streaks":{"TBL":{"type":"WINS","count":3},"CBJ":{"type":"OT","count":2}},"standings":{"TBL":{"divisionRank":"1","leagueRank":"1"},"CBJ":{"divisionRank":"7","leagueRank":"24"}}}}"#,
         )?;
 
-        let parsed_game = parse_game(&test_game);
+        let parsed_game = parse_game(&test_game).unwrap();
 
         assert_eq!(parsed_game.home, "CBJ");
         assert_eq!(parsed_game.away, "TBL");
@@ -456,7 +465,7 @@ mod tests {
             }"#,
         )?;
 
-        let parsed_game = parse_game(&test_game);
+        let parsed_game = parse_game(&test_game).unwrap();
 
         assert_eq!(parsed_game.home, "TOR");
         assert_eq!(parsed_game.away, "PIT");
@@ -508,7 +517,7 @@ mod tests {
             }"#,
         )?;
 
-        let parsed_game = parse_game(&test_game);
+        let parsed_game = parse_game(&test_game).unwrap();
 
         assert_eq!(parsed_game.home, "TOR");
         assert_eq!(parsed_game.away, "PIT");
@@ -516,6 +525,18 @@ mod tests {
         assert_eq!(parsed_game.goals.len(), 0);
         assert_eq!(parsed_game.status, "LIVE");
         assert_eq!(parsed_game.special, "");
+
+        Ok(())
+    }
+
+    #[test]
+    fn it_parses_missing_teams_data_correctly() -> serde_json::Result<()> {
+        let test_game = serde_json::from_str(
+            r#"{"status":{"state":"LIVE","progress":{"currentPeriod":3,"currentPeriodOrdinal":"3rd","currentPeriodTimeRemaining":{"min":12,"sec":21,"pretty":"12:21"}}},"startTime":"2021-01-23T19:00:00Z","goals":[{"team":"TBL","period":"1","scorer":{"player":"Victor Hedman","seasonTotal":1},"assists":[{"player":"Mitchell Stephens","seasonTotal":1},{"player":"Alexander Volkov","seasonTotal":1}],"min":4,"sec":10},{"team":"CBJ","period":"1","scorer":{"player":"Nick Foligno","seasonTotal":3},"assists":[{"player":"Cam Atkinson","seasonTotal":2},{"player":"Michael Del Zotto","seasonTotal":4}],"min":4,"sec":27},{"team":"CBJ","period":"1","scorer":{"player":"Mikhail Grigorenko","seasonTotal":1},"assists":[{"player":"Kevin Stenlund","seasonTotal":1},{"player":"Nathan Gerbe","seasonTotal":1}],"min":10,"sec":3},{"team":"CBJ","period":"1","scorer":{"player":"Vladislav Gavrikov","seasonTotal":1},"assists":[{"player":"Liam Foudy","seasonTotal":2},{"player":"Eric Robinson","seasonTotal":1}],"min":19,"sec":1},{"team":"TBL","period":"1","scorer":{"player":"Ondrej Palat","seasonTotal":3},"assists":[{"player":"Brayden Point","seasonTotal":3},{"player":"Victor Hedman","seasonTotal":4}],"min":19,"sec":46,"strength":"PPG"},{"team":"CBJ","period":"3","scorer":{"player":"Zach Werenski","seasonTotal":1},"assists":[{"player":"Alexandre Texier","seasonTotal":2},{"player":"Boone Jenner","seasonTotal":2}],"min":6,"sec":34}],"scores":{"TBL":2,"CBJ":4},"preGameStats":{"records":{"TBL":{"wins":3,"losses":0,"ot":0},"CBJ":{"wins":1,"losses":2,"ot":2}}},"currentStats":{"records":{"TBL":{"wins":3,"losses":0,"ot":0},"CBJ":{"wins":1,"losses":2,"ot":2}},"streaks":{"TBL":{"type":"WINS","count":3},"CBJ":{"type":"OT","count":2}},"standings":{"TBL":{"divisionRank":"1","leagueRank":"1"},"CBJ":{"divisionRank":"7","leagueRank":"24"}}}}"#,
+        )?;
+
+        let parsed_game = parse_game(&test_game);
+        assert_eq!(parsed_game.is_some(), false);
 
         Ok(())
     }
