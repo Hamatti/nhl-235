@@ -107,6 +107,10 @@ async fn api() -> Result<(), Error> {
         .map(|game| parse_game(&game))
         .collect::<Vec<Game>>();
 
+    _results.into_iter().for_each(|game| {
+        print_game(&game);
+    });
+
     Ok(())
 }
 
@@ -192,8 +196,6 @@ fn parse_game(game_json: &serde_json::Value) -> Game {
         special: String::from(special_str),
     };
 
-    print_game(&game);
-    println!();
     game
 }
 
@@ -249,6 +251,7 @@ fn print_game(game: &Game) {
             print_right(so)
         }
     }
+    println!();
 }
 
 fn print_full(home: &Goal, away: &Goal) {
