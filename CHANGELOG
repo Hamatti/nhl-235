@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3 - 2020-01-24
+
+### Added
+- Tests for a lot of the codebase
+- Refactoring to make it more error prone
 
 ## 0.2.2 - 2020-01-23
 
