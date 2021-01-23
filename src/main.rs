@@ -32,6 +32,7 @@ struct Game {
     score: String,
     goals: Vec<Goal>,
     status: String,
+    special: String,
 }
 
 fn main() {
@@ -120,6 +121,14 @@ fn parse_game(game_json: &serde_json::Value) -> Game {
     let away_team = &game_json["teams"]["away"]["abbreviation"].as_str().unwrap();
     let home_score = &game_json["scores"][home_team];
     let away_score = &game_json["scores"][away_team];
+
+    let special = game_json["goals"].as_array().unwrap().last().unwrap();
+    let special = match special["period"].as_str().unwrap() {
+        "OT" => "ot",
+        "SO" => "so",
+        _ => "",
+    };
+
     let score = format!("{}-{}", home_score, away_score);
     let goals: &Vec<serde_json::Value> = game_json["goals"].as_array().unwrap();
 
@@ -155,6 +164,7 @@ fn parse_game(game_json: &serde_json::Value) -> Game {
         score: score.to_owned(),
         goals: goals,
         status: String::from(game_json["status"]["state"].as_str().unwrap()),
+        special: String::from(special),
     };
 
     print_game(&game);
@@ -185,7 +195,7 @@ fn print_game(game: &Game) {
     if game.status == "LIVE" {
         white_ln!("{:>6}", game.score);
     } else if game.status == "FINAL" {
-        green_ln!("{:>6}", game.score);
+        green_ln!("{:>6}", format!("{} {}", game.special, game.score));
     }
 
     // Print scores
