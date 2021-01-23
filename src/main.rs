@@ -36,7 +36,6 @@ struct Game {
 }
 
 fn main() {
-    // print_test_game();
     match api() {
         Ok(_) => (),
         Err(err) => println!("{:?}", err),
