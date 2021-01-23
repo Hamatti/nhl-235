@@ -1,5 +1,11 @@
 # Changelog
 
+
+## 0.2.2 - 2020-01-23
+
+### Fixed
+- A crash when there were games with no goals
+
 ## 0.2.1 - 2020-01-23
 
 ### Added
