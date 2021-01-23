@@ -467,4 +467,56 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn it_parses_a_game_with_no_goals_correctly() -> serde_json::Result<()> {
+        let test_game = serde_json::from_str(
+            r#"
+            {
+                "status":{
+                    "state":"LIVE"
+                },
+                "startTime":"2021-01-23T19:00:00Z",
+                "goals":[],
+                    "scores":{
+                        "PIT":0,"TOR":0
+                    },
+                    "teams":{
+                        "away":{
+                            "abbreviation":"PIT",
+                            "id":14,
+                            "locationName":"Pittsburgh",
+                            "shortName":"Pittsburgh",
+                            "teamName":"Penguins"
+                        },
+                        "home":{
+                            "abbreviation":"TOR",
+                            "id":29,
+                            "locationName":"Toronto",
+                            "shortName":"Toronto",
+                            "teamName":"Maple Leafs"
+                        }
+                    },
+                    "preGameStats":{"records":{"PIT":{"wins":3,"losses":0,"ot":0},"TOR":{"wins":1,"losses":2,"ot":2}}},
+                    "currentStats":{"records":{"PIT":{"wins":4,"losses":0,"ot":0},"TOR":{"wins":1,"losses":2,"ot":3}},
+                    "streaks":{"PIT":{"type":"WINS","count":3},"TOR":{"type":"OT","count":2}},
+                    "standings":{
+                        "PIT":{"divisionRank":"1","leagueRank":"1"},
+                        "CBJ":{"divisionRank":"7","leagueRank":"24"}
+                    }
+                }
+            }"#,
+        )?;
+
+        let parsed_game = parse_game(&test_game);
+
+        assert_eq!(parsed_game.home, "TOR");
+        assert_eq!(parsed_game.away, "PIT");
+        assert_eq!(parsed_game.score, "0-0");
+        assert_eq!(parsed_game.goals.len(), 0);
+        assert_eq!(parsed_game.status, "LIVE");
+        assert_eq!(parsed_game.special, "");
+
+        Ok(())
+    }
 }
