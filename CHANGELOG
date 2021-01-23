@@ -1,0 +1,8 @@
+# Changelog
+
+## 0.1.0 - 2020-01-23
+
+### Initial release
+- Displays game scores from current or previous round
+- Displays goal scorers and minutes
+- Uses visuals familiar for 235 users
