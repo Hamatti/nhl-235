@@ -1,6 +1,17 @@
 # Changelog
 
-## 0.1.0 - 2020-01-23
+## 0.2.0 - 2020-01-23
+
+### Added
+- `--version` flag
+- "ot" or "so" indicator to the score if game finishes in overtime or shootout
+- MIT license
+
+### Fixes
+- Displays Toronto's name correctly
+- Only shows the game-winning shootout goal if multiple goals made
+
+## 0.1.0 - 2020-01-22
 
 ### Initial release
 - Displays game scores from current or previous round
