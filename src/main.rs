@@ -121,10 +121,15 @@ fn format_minute(min: u64, period: &str) -> u64 {
 }
 
 fn is_special(goal: &serde_json::Value) -> bool {
-    let period = goal["period"].as_str().unwrap();
-    let is_ot = period == "OT";
-    let is_so = period == "SO";
-    is_ot || is_so
+    let period = goal["period"].as_str();
+    match period {
+        Some(period) => {
+            let is_ot = period == "OT";
+            let is_so = period == "SO";
+            is_ot || is_so
+        }
+        None => false,
+    }
 }
 
 fn parse_game(game_json: &serde_json::Value) -> Game {
@@ -319,23 +324,26 @@ mod tests {
 
     #[test]
     fn is_special_works() -> serde_json::Result<()> {
-        let first = r#"{ "period": "1" }"#;
-        let second = r#"{ "period": "2" }"#;
-        let third = r#"{ "period": "3" }"#;
-        let overtime = r#"{ "period": "OT" }"#;
-        let shootout = r#"{ "period": "SO" }"#;
+        let first = r#"{ "team": "CHI", "period": "1" }"#;
+        let second = r#"{ "team": "CHI", "period": "2" }"#;
+        let third = r#"{ "team": "CHI", "period": "3" }"#;
+        let overtime = r#"{ "team": "CHI", "period": "OT" }"#;
+        let shootout = r#"{ "team": "CHI", "period": "SO" }"#;
+        let missing_data = r#"{ "team": "CHI" }"#;
 
-        let game1: serde_json::Value = serde_json::from_str(&first)?;
-        let game2: serde_json::Value = serde_json::from_str(&second)?;
-        let game3: serde_json::Value = serde_json::from_str(&third)?;
-        let game4: serde_json::Value = serde_json::from_str(&overtime)?;
-        let game5: serde_json::Value = serde_json::from_str(&shootout)?;
+        let goal1: serde_json::Value = serde_json::from_str(&first)?;
+        let goal2: serde_json::Value = serde_json::from_str(&second)?;
+        let goal3: serde_json::Value = serde_json::from_str(&third)?;
+        let goal4: serde_json::Value = serde_json::from_str(&overtime)?;
+        let goal5: serde_json::Value = serde_json::from_str(&shootout)?;
+        let goal6: serde_json::Value = serde_json::from_str(&missing_data)?;
 
-        assert_eq!(is_special(&game1), false);
-        assert_eq!(is_special(&game2), false);
-        assert_eq!(is_special(&game3), false);
-        assert_eq!(is_special(&game4), true);
-        assert_eq!(is_special(&game5), true);
+        assert_eq!(is_special(&goal1), false);
+        assert_eq!(is_special(&goal2), false);
+        assert_eq!(is_special(&goal3), false);
+        assert_eq!(is_special(&goal4), true);
+        assert_eq!(is_special(&goal5), true);
+        assert_eq!(is_special(&goal6), false);
 
         Ok(())
     }
