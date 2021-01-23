@@ -1,10 +1,10 @@
 /**
- * NHL-235 is a command line tool for showing NHL results from previous day or current 
+ * NHL-235 is a command line tool for showing NHL results from previous day or current
  * in a format that's mimicing YLE's Tekstitv aesthetics
- * 
+ *
  * 235 in the name refers to tekstitv page 235 which has for decades shown NHL results
  * and is a cultural piece for hockey fans in Finland
- * 
+ *
  * Uses https://github.com/peruukki/nhl-score-api API for score info
  */
 
@@ -12,11 +12,9 @@
 extern crate colour;
 use reqwest::Error;
 use serde_json;
+use structopt::StructOpt;
 
-use itertools::{
-    Itertools,
-    EitherOrBoth::*,
-};
+use itertools::{EitherOrBoth::*, Itertools};
 
 #[derive(Debug)]
 struct Goal {
@@ -25,7 +23,7 @@ struct Goal {
     minute: u64,
     finn: bool,
     special: bool,
-    team: String
+    team: String,
 }
 
 #[derive(Debug)]
@@ -34,15 +32,26 @@ struct Game {
     away: String,
     score: String,
     goals: Vec<Goal>,
-    status: String
+    status: String,
+    special: String,
+}
+
+#[derive(StructOpt, Debug)]
+struct Cli {
+    #[structopt(long)]
+    version: bool,
 }
 
 fn main() {
-    // print_test_game();
-    match api() {
-        Ok(_) => (),
-        Err(err) => println!("{:?}", err)
-    };
+    let args = Cli::from_args();
+    if args.version {
+        println!("{}", env!("CARGO_PKG_VERSION"));
+    } else {
+        match api() {
+            Ok(_) => (),
+            Err(err) => println!("{:?}", err),
+        };
+    }
 }
 
 fn translate_team_name(abbr: &str) -> String {
@@ -75,10 +84,10 @@ fn translate_team_name(abbr: &str) -> String {
         "EDM" => "Edmonton",
         "MTL" => "Montreal",
         "OTT" => "Ottawa",
-        "TML" => "Toronto",
+        "TOR" => "Toronto",
         "VAN" => "Vancouver",
-        "WPG" => "Winnipeg",        
-        _ => "[unknown]"
+        "WPG" => "Winnipeg",
+        _ => "[unknown]",
     };
 
     String::from(str_form)
@@ -88,15 +97,15 @@ fn translate_team_name(abbr: &str) -> String {
 async fn api() -> Result<(), Error> {
     let request_url = String::from("https://nhl-score-api.herokuapp.com/api/scores/latest");
     let response = reqwest::get(&request_url).await?;
-    let scores: serde_json::Value<> = response.json().await?;
+    let scores: serde_json::Value = response.json().await?;
 
     let games = scores["games"].as_array().unwrap();
 
     let itergames = games.iter();
 
-    let _results = itergames.map(|game| 
-        parse_game(&game)
-    ).collect::<Vec<Game>>();
+    let _results = itergames
+        .map(|game| parse_game(&game))
+        .collect::<Vec<Game>>();
 
     Ok(())
 }
@@ -107,7 +116,7 @@ fn format_minute(min: u64, period: &str) -> u64 {
         "2" => 20 + min,
         "3" => 40 + min,
         "OT" => 60 + min,
-        _ => min
+        _ => min,
     }
 }
 
@@ -118,41 +127,55 @@ fn is_special(goal: &serde_json::Value) -> bool {
     is_ot || is_so
 }
 
-fn parse_game(game_json: &serde_json::Value<>) -> Game { 
+fn parse_game(game_json: &serde_json::Value) -> Game {
     let home_team = &game_json["teams"]["home"]["abbreviation"].as_str().unwrap();
     let away_team = &game_json["teams"]["away"]["abbreviation"].as_str().unwrap();
     let home_score = &game_json["scores"][home_team];
     let away_score = &game_json["scores"][away_team];
+
+    let special = game_json["goals"].as_array().unwrap().last().unwrap();
+    let special = match special["period"].as_str().unwrap() {
+        "OT" => "ot",
+        "SO" => "so",
+        _ => "",
+    };
+
     let score = format!("{}-{}", home_score, away_score);
-    let goals: &Vec<serde_json::Value> = game_json["goals"].as_array().unwrap(); 
+    let goals: &Vec<serde_json::Value> = game_json["goals"].as_array().unwrap();
 
-    let goals = goals.into_iter().map(|goal| {
-        let raw_min = match goal["period"].as_str().unwrap() {
-            "SO" => 65,
-            _ => format_minute(goal["min"].as_u64().unwrap(), &goal["period"].as_str().unwrap())
-        };
+    let goals = goals
+        .into_iter()
+        .map(|goal| {
+            let raw_min = match goal["period"].as_str().unwrap() {
+                "SO" => 65,
+                _ => format_minute(
+                    goal["min"].as_u64().unwrap(),
+                    &goal["period"].as_str().unwrap(),
+                ),
+            };
 
-        let scorer = goal["scorer"]["player"].as_str().unwrap();
-        let scorer = scorer.split(" ").collect::<Vec<&str>>();
-        let scorer = scorer[1..scorer.len()].to_vec();
-        let scorer = scorer.join(" ");
-        
-        return Goal { 
-            scorer: scorer,
-            minute: raw_min,
-            finn: false, // @TODO: Figure this out
-            finn_assist: String::from(""), // @TODO: Figure this out,
-            team: goal["team"].to_string().replace("\"", ""),
-            special: is_special(goal)
-        }
-    }).collect::<Vec<Goal>>();
+            let scorer = goal["scorer"]["player"].as_str().unwrap();
+            let scorer = scorer.split(" ").collect::<Vec<&str>>();
+            let scorer = scorer[1..scorer.len()].to_vec();
+            let scorer = scorer.join(" ");
 
+            return Goal {
+                scorer: scorer,
+                minute: raw_min,
+                finn: false,                   // @TODO: Figure this out
+                finn_assist: String::from(""), // @TODO: Figure this out,
+                team: goal["team"].to_string().replace("\"", ""),
+                special: is_special(goal),
+            };
+        })
+        .collect::<Vec<Goal>>();
     let game = Game {
         home: String::from(*home_team),
         away: String::from(*away_team),
         score: score.to_owned(),
         goals: goals,
-        status: String::from(game_json["status"]["state"].as_str().unwrap())
+        status: String::from(game_json["status"]["state"].as_str().unwrap()),
+        special: String::from(special),
     };
 
     print_game(&game);
@@ -161,15 +184,35 @@ fn parse_game(game_json: &serde_json::Value<>) -> Game {
 }
 
 fn print_game(game: &Game) {
-    let home_scores: Vec<&Goal> = game.goals.iter().filter(|goal| goal.team == (&game).home).collect::<Vec<&Goal>>();
-    let away_scores: Vec<&Goal> = game.goals.iter().filter(|goal| goal.team == (&game).away).collect::<Vec<&Goal>>();
+    let home_scores: Vec<&Goal> = game
+        .goals
+        .iter()
+        .filter(|goal| goal.team == (&game).home && goal.minute != 65)
+        .collect::<Vec<&Goal>>();
+    let away_scores: Vec<&Goal> = game
+        .goals
+        .iter()
+        .filter(|goal| goal.team == (&game).away && goal.minute != 65)
+        .collect::<Vec<&Goal>>();
+
+    let mut shootout_scorer = None;
+
+    if game.special == "so" {
+        shootout_scorer = Some(game.goals.iter().last().unwrap());
+    }
 
     // Print header
-    white!("{:<15} {:>2} {:<15} {:<2} ", translate_team_name(&game.home[..]), '-', translate_team_name(&game.away[..]), "");
+    white!(
+        "{:<15} {:>2} {:<15} {:<2} ",
+        translate_team_name(&game.home[..]),
+        '-',
+        translate_team_name(&game.away[..]),
+        ""
+    );
     if game.status == "LIVE" {
         white_ln!("{:>6}", game.score);
     } else if game.status == "FINAL" {
-        green_ln!("{:>6}", game.score);
+        green_ln!("{:>6}", format!("{} {}", game.special, game.score));
     }
 
     // Print scores
@@ -178,7 +221,18 @@ fn print_game(game: &Game) {
         match pair {
             Both(l, r) => print_full(l, r),
             Left(l) => print_left(l),
-            Right(r) => print_right(r)
+            Right(r) => print_right(r),
+        }
+    }
+
+    // Game-winning shootout goal is always on its own line because
+    // the game must be tied before it so it's safe to print it after everything.
+    // If we later add assists by Finns, this needs to be rewritten.
+    if let Some(so) = shootout_scorer {
+        if so.team == game.home {
+            print_left(so)
+        } else {
+            print_right(so)
         }
     }
 }
@@ -186,8 +240,7 @@ fn print_game(game: &Game) {
 fn print_full(home: &Goal, away: &Goal) {
     if home.special {
         magenta!("{:<15} {:>2} ", home.scorer, home.minute);
-    }
-    else if home.finn {
+    } else if home.finn {
         green!("{:<15} {:>2} ", home.scorer, home.minute);
     } else {
         cyan!("{:<15} {:>2} ", home.scorer, home.minute);
@@ -197,7 +250,6 @@ fn print_full(home: &Goal, away: &Goal) {
         magenta_ln!("{:<15} {:>2}", away.scorer, away.minute);
     } else if away.finn {
         green_ln!("{:<15} {:>2}", away.scorer, away.minute);
-        
     } else {
         cyan_ln!("{:<15} {:>2}", away.scorer, away.minute);
     }
@@ -215,11 +267,29 @@ fn print_left(home: &Goal) {
 
 fn print_right(away: &Goal) {
     if away.special {
-        magenta_ln!("{:<15} {:>2} {:<15} {:>2}", "", "", away.scorer, away.minute);
+        magenta_ln!(
+            "{:<15} {:>2} {:<15} {:>2}",
+            "",
+            "",
+            away.scorer,
+            away.minute
+        );
     } else if away.finn {
-        green_ln!("{:<15} {:>2} {:<15} {:>2}", "", "", away.scorer, away.minute);
+        green_ln!(
+            "{:<15} {:>2} {:<15} {:>2}",
+            "",
+            "",
+            away.scorer,
+            away.minute
+        );
     } else {
-        cyan_ln!("{:<15} {:>2} {:<15} {:>2}", "", "", away.scorer, away.minute);
+        cyan_ln!(
+            "{:<15} {:>2} {:<15} {:>2}",
+            "",
+            "",
+            away.scorer,
+            away.minute
+        );
     }
 }
 
