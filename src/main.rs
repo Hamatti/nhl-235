@@ -133,11 +133,20 @@ fn parse_game(game_json: &serde_json::Value) -> Game {
     let home_score = &game_json["scores"][home_team];
     let away_score = &game_json["scores"][away_team];
 
-    let special = game_json["goals"].as_array().unwrap().last().unwrap();
-    let special = match special["period"].as_str().unwrap() {
-        "OT" => "ot",
-        "SO" => "so",
-        _ => "",
+    let empty: Vec<serde_json::Value> = Vec::new();
+
+    let all_goals = game_json["goals"].as_array().unwrap_or(&empty); // This could be empty, thus return None
+
+    let special_str = match all_goals.len() {
+        0 => "",
+        _ => {
+            let special = all_goals.last().unwrap();
+            match special["period"].as_str().unwrap() {
+                "OT" => "ot",
+                "SO" => "so",
+                _ => "",
+            }
+        }
     };
 
     let score = format!("{}-{}", home_score, away_score);
@@ -175,7 +184,7 @@ fn parse_game(game_json: &serde_json::Value) -> Game {
         score: score.to_owned(),
         goals: goals,
         status: String::from(game_json["status"]["state"].as_str().unwrap()),
-        special: String::from(special),
+        special: String::from(special_str),
     };
 
     print_game(&game);
