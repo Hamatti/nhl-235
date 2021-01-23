@@ -72,7 +72,7 @@ fn translate_team_name(abbr: &str) -> String {
         "EDM" => "Edmonton",
         "MTL" => "Montreal",
         "OTT" => "Ottawa",
-        "TML" => "Toronto",
+        "TOR" => "Toronto",
         "VAN" => "Vancouver",
         "WPG" => "Winnipeg",
         _ => "[unknown]",
