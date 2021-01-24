@@ -238,6 +238,8 @@ fn print_game(game: &Game) {
         white_ln!("{:>6}", game.score);
     } else if game.status == "FINAL" {
         green_ln!("{:>6}", format!("{} {}", game.special, game.score));
+    } else if game.status == "POSTPONED" {
+        white_ln!("{:>6}", "POSTP.");
     }
 
     // Print scores
