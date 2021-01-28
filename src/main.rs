@@ -127,15 +127,10 @@ fn format_minute(min: u64, period: &str) -> u64 {
 fn is_special(goal: &serde_json::Value) -> bool {
     let period = goal["period"].as_str();
     match period {
-        Some(period) => {
-            let is_ot = period == "OT";
-            let is_so = period == "SO";
-            let is_playoff_ot = match period.parse::<u64>() {
-                Ok(period) => period >= 4,
-                Err(_) => false,
-            };
-            is_ot || is_so || is_playoff_ot
-        }
+        Some(period) => match period.parse::<u64>() {
+            Ok(period) => period >= 4,
+            Err(_) => true,
+        },
         None => false,
     }
 }
