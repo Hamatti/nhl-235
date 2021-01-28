@@ -130,7 +130,11 @@ fn is_special(goal: &serde_json::Value) -> bool {
         Some(period) => {
             let is_ot = period == "OT";
             let is_so = period == "SO";
-            is_ot || is_so
+            let is_playoff_ot = match period.parse::<u64>() {
+                Ok(period) => period >= 4,
+                Err(_) => false,
+            };
+            is_ot || is_so || is_playoff_ot
         }
         None => false,
     }
@@ -335,6 +339,8 @@ mod tests {
         let overtime = r#"{ "team": "CHI", "period": "OT" }"#;
         let shootout = r#"{ "team": "CHI", "period": "SO" }"#;
         let missing_data = r#"{ "team": "CHI" }"#;
+        let playoff_ot = r#"{ "team": "CHI", "period": "4" }"#;
+        let playoff_ot_2 = r#"{ "team": "CHI", "period": "10" }"#;
 
         let goal1: serde_json::Value = serde_json::from_str(&first)?;
         let goal2: serde_json::Value = serde_json::from_str(&second)?;
@@ -342,6 +348,8 @@ mod tests {
         let goal4: serde_json::Value = serde_json::from_str(&overtime)?;
         let goal5: serde_json::Value = serde_json::from_str(&shootout)?;
         let goal6: serde_json::Value = serde_json::from_str(&missing_data)?;
+        let goal7: serde_json::Value = serde_json::from_str(&playoff_ot)?;
+        let goal8: serde_json::Value = serde_json::from_str(&playoff_ot_2)?;
 
         assert_eq!(is_special(&goal1), false);
         assert_eq!(is_special(&goal2), false);
@@ -349,6 +357,8 @@ mod tests {
         assert_eq!(is_special(&goal4), true);
         assert_eq!(is_special(&goal5), true);
         assert_eq!(is_special(&goal6), false);
+        assert_eq!(is_special(&goal7), true);
+        assert_eq!(is_special(&goal8), true);
 
         Ok(())
     }
