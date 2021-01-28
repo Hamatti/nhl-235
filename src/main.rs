@@ -116,12 +116,11 @@ async fn api() -> Result<(), Error> {
 }
 
 fn format_minute(min: u64, period: &str) -> u64 {
-    match period {
-        "1" => min,
-        "2" => 20 + min,
-        "3" => 40 + min,
-        "OT" => 60 + min,
-        _ => min,
+    if period == "OT" {
+        60 + min
+    } else {
+        let numeric_period: u64 = period.parse().unwrap();
+        20 * (numeric_period - 1) + min
     }
 }
 
@@ -318,6 +317,9 @@ mod tests {
         assert_eq!(format_minute(3, "1"), 3);
         assert_eq!(format_minute(13, "2"), 33);
         assert_eq!(format_minute(5, "3"), 45);
+        assert_eq!(format_minute(12, "4"), 72);
+        assert_eq!(format_minute(5, "5"), 85);
+        assert_eq!(format_minute(5, "6"), 105);
         assert_eq!(format_minute(4, "OT"), 64);
         assert_eq!(format_minute(0, "1"), 0);
         assert_eq!(format_minute(0, "2"), 20);
