@@ -116,23 +116,21 @@ async fn api() -> Result<(), Error> {
 }
 
 fn format_minute(min: u64, period: &str) -> u64 {
-    match period {
-        "1" => min,
-        "2" => 20 + min,
-        "3" => 40 + min,
-        "OT" => 60 + min,
-        _ => min,
+    if period == "OT" {
+        60 + min
+    } else {
+        let numeric_period: u64 = period.parse().unwrap();
+        20 * (numeric_period - 1) + min
     }
 }
 
 fn is_special(goal: &serde_json::Value) -> bool {
     let period = goal["period"].as_str();
     match period {
-        Some(period) => {
-            let is_ot = period == "OT";
-            let is_so = period == "SO";
-            is_ot || is_so
-        }
+        Some(period) => match period.parse::<u64>() {
+            Ok(period) => period >= 4,
+            Err(_) => true,
+        },
         None => false,
     }
 }
@@ -159,10 +157,18 @@ fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
         0 => "",
         _ => {
             let special = all_goals.last().unwrap();
-            match special["period"].as_str().unwrap() {
+            let result = special["period"].as_str().unwrap();
+            match result {
                 "OT" => "ot",
                 "SO" => "so",
-                _ => "",
+                _ => {
+                    let period = result.parse().unwrap_or(0);
+                    if period > 3 {
+                        "ot"
+                    } else {
+                        ""
+                    }
+                }
             }
         }
     };
@@ -318,6 +324,9 @@ mod tests {
         assert_eq!(format_minute(3, "1"), 3);
         assert_eq!(format_minute(13, "2"), 33);
         assert_eq!(format_minute(5, "3"), 45);
+        assert_eq!(format_minute(12, "4"), 72);
+        assert_eq!(format_minute(5, "5"), 85);
+        assert_eq!(format_minute(5, "6"), 105);
         assert_eq!(format_minute(4, "OT"), 64);
         assert_eq!(format_minute(0, "1"), 0);
         assert_eq!(format_minute(0, "2"), 20);
@@ -333,6 +342,9 @@ mod tests {
         let overtime = r#"{ "team": "CHI", "period": "OT" }"#;
         let shootout = r#"{ "team": "CHI", "period": "SO" }"#;
         let missing_data = r#"{ "team": "CHI" }"#;
+        let playoff_ot = r#"{ "team": "CHI", "period": "4" }"#;
+        let playoff_ot_2 = r#"{ "team": "CHI", "period": "10" }"#;
+        let wrong_data = r#"{ "team": "CHI", "period": "SP" }"#;
 
         let goal1: serde_json::Value = serde_json::from_str(&first)?;
         let goal2: serde_json::Value = serde_json::from_str(&second)?;
@@ -340,6 +352,9 @@ mod tests {
         let goal4: serde_json::Value = serde_json::from_str(&overtime)?;
         let goal5: serde_json::Value = serde_json::from_str(&shootout)?;
         let goal6: serde_json::Value = serde_json::from_str(&missing_data)?;
+        let goal7: serde_json::Value = serde_json::from_str(&playoff_ot)?;
+        let goal8: serde_json::Value = serde_json::from_str(&playoff_ot_2)?;
+        let goal9: serde_json::Value = serde_json::from_str(&wrong_data)?;
 
         assert_eq!(is_special(&goal1), false);
         assert_eq!(is_special(&goal2), false);
@@ -347,6 +362,11 @@ mod tests {
         assert_eq!(is_special(&goal4), true);
         assert_eq!(is_special(&goal5), true);
         assert_eq!(is_special(&goal6), false);
+        assert_eq!(is_special(&goal7), true);
+        assert_eq!(is_special(&goal8), true);
+        // I haven't yet really decided what this should be but
+        // important thing is that it does not crash the app
+        assert_eq!(is_special(&goal9), true);
 
         Ok(())
     }
@@ -528,6 +548,73 @@ mod tests {
 
         let parsed_game = parse_game(&test_game);
         assert_eq!(parsed_game.is_some(), false);
+
+        Ok(())
+    }
+
+    #[test]
+    fn it_parses_a_playoffs_game_with_overtime_correctly() -> serde_json::Result<()> {
+        let test_game = serde_json::from_str(
+            r#"
+            {
+                "status":{
+                    "state":"FINAL"
+                },
+                "startTime":"2021-01-23T19:00:00Z",
+                "goals":[{
+                    "team":"PIT",
+                    "period":"4",
+                    "scorer":{
+                        "player":"Sidney Crosby",
+                        "seasonTotal":3
+                    },
+                    "assists":[
+                        {
+                            "player":"Evgeni Malkin",
+                            "seasonTotal":2
+                        }
+                    ],
+                    "min":4,
+                    "sec":27
+                }],
+                    "scores":{
+                        "PIT":1,"TOR":0
+                    },
+                    "teams":{
+                        "away":{
+                            "abbreviation":"PIT",
+                            "id":14,
+                            "locationName":"Pittsburgh",
+                            "shortName":"Pittsburgh",
+                            "teamName":"Penguins"
+                        },
+                        "home":{
+                            "abbreviation":"TOR",
+                            "id":29,
+                            "locationName":"Toronto",
+                            "shortName":"Toronto",
+                            "teamName":"Maple Leafs"
+                        }
+                    },
+                    "preGameStats":{"records":{"PIT":{"wins":3,"losses":0,"ot":0},"TOR":{"wins":1,"losses":2,"ot":2}}},
+                    "currentStats":{"records":{"PIT":{"wins":4,"losses":0,"ot":0},"TOR":{"wins":1,"losses":2,"ot":3}},
+                    "streaks":{"PIT":{"type":"WINS","count":3},"TOR":{"type":"OT","count":2}},
+                    "standings":{
+                        "PIT":{"divisionRank":"1","leagueRank":"1"},
+                        "CBJ":{"divisionRank":"7","leagueRank":"24"}
+                    }
+                }
+            }"#,
+        )?;
+
+        let parsed_game = parse_game(&test_game).unwrap();
+
+        assert_eq!(parsed_game.home, "TOR");
+        assert_eq!(parsed_game.away, "PIT");
+        assert_eq!(parsed_game.score, "0-1");
+        assert_eq!(parsed_game.goals.len(), 1);
+        assert_eq!(parsed_game.status, "FINAL");
+        assert_eq!(parsed_game.special, "ot");
 
         Ok(())
     }
