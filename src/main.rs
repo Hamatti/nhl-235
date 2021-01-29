@@ -336,6 +336,7 @@ mod tests {
         let missing_data = r#"{ "team": "CHI" }"#;
         let playoff_ot = r#"{ "team": "CHI", "period": "4" }"#;
         let playoff_ot_2 = r#"{ "team": "CHI", "period": "10" }"#;
+        let wrong_data = r#"{ "team": "CHI", "period": "SP" }"#;
 
         let goal1: serde_json::Value = serde_json::from_str(&first)?;
         let goal2: serde_json::Value = serde_json::from_str(&second)?;
@@ -345,6 +346,7 @@ mod tests {
         let goal6: serde_json::Value = serde_json::from_str(&missing_data)?;
         let goal7: serde_json::Value = serde_json::from_str(&playoff_ot)?;
         let goal8: serde_json::Value = serde_json::from_str(&playoff_ot_2)?;
+        let goal9: serde_json::Value = serde_json::from_str(&wrong_data)?;
 
         assert_eq!(is_special(&goal1), false);
         assert_eq!(is_special(&goal2), false);
@@ -354,6 +356,9 @@ mod tests {
         assert_eq!(is_special(&goal6), false);
         assert_eq!(is_special(&goal7), true);
         assert_eq!(is_special(&goal8), true);
+        // I haven't yet really decided what this should be but
+        // important thing is that it does not crash the app
+        assert_eq!(is_special(&goal9), true);
 
         Ok(())
     }
