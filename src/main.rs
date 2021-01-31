@@ -103,6 +103,9 @@ async fn fetch_games() -> Result<serde_json::Value, Error> {
     Ok(scores)
 }
 
+/// Transforms a JSON structure of multiple games into
+/// a vector of Option<Game> so they can be processed by
+/// other parts of the application
 fn parse_games(scores: serde_json::Value) -> Vec<Option<Game>> {
     let games = scores["games"].as_array().unwrap();
 
@@ -112,6 +115,7 @@ fn parse_games(scores: serde_json::Value) -> Vec<Option<Game>> {
         .collect::<Vec<Option<Game>>>()
 }
 
+/// Handler function to print multiple Games
 fn print_games(games: Vec<Option<Game>>) {
     games.into_iter().for_each(|game| match game {
         Some(game) => print_game(&game),
@@ -119,15 +123,20 @@ fn print_games(games: Vec<Option<Game>>) {
     });
 }
 
+/// Transforms a combination of min (between 0 and 19) and
+/// period ("OT", "SO" or number > 0 in number form)
+/// into a numeric minute given 20 minute periods
 fn format_minute(min: u64, period: &str) -> u64 {
     if period == "OT" {
         60 + min
     } else {
-        let numeric_period: u64 = period.parse().unwrap();
-        20 * (numeric_period - 1) + min
+        let period: u64 = period.parse().unwrap();
+        20 * (period - 1) + min
     }
 }
 
+/// Returns true if the goal scored was done in
+/// overtime or in a shootout
 fn is_special(goal: &serde_json::Value) -> bool {
     let period = goal["period"].as_str();
     match period {
@@ -139,6 +148,7 @@ fn is_special(goal: &serde_json::Value) -> bool {
     }
 }
 
+/// Transforms a JSON structure of an individual game into a Game
 fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
     if (&game_json["teams"]).is_null() {
         return None;
