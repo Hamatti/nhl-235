@@ -194,15 +194,7 @@ fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
                 ),
             };
 
-            // Remove the first part of player's name.
-            // This is not always correct since a player
-            // can have multiple first names but it's a
-            // tradeoff since we don't have data on that
-            // and full name would be too long
-            let scorer = goal["scorer"]["player"].as_str().unwrap();
-            let scorer = scorer.split(" ").collect::<Vec<&str>>();
-            let scorer = scorer[1..scorer.len()].to_vec();
-            let scorer = scorer.join(" ");
+            let scorer = extract_scorer_name(&goal["scorer"]["player"].as_str().unwrap());
 
             return Goal {
                 scorer: scorer,
@@ -224,6 +216,19 @@ fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
     };
 
     Some(game)
+}
+
+/// Attempts to return player's last name
+/// by removing the first part of player's name.
+///
+/// This is not always correct since a player
+/// can have multiple first names but it's a
+/// tradeoff since we don't have data on that
+/// and full name would be too long
+fn extract_scorer_name(name: &str) -> String {
+    let name = name.split(" ").collect::<Vec<&str>>();
+    let name = name[1..name.len()].to_vec();
+    name.join(" ")
 }
 
 fn print_game(game: &Game) {
@@ -621,5 +626,14 @@ mod tests {
         assert_eq!(parsed_game.special, "ot");
 
         Ok(())
+    }
+
+    #[test]
+    fn it_extracts_player_name_correctly() {
+        assert_eq!(extract_scorer_name("Olli Maatta"), String::from("Maatta"));
+        assert_eq!(
+            extract_scorer_name("James van Riemsdyk"),
+            String::from("van Riemsdyk")
+        );
     }
 }
