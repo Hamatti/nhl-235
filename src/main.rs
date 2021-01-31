@@ -176,6 +176,10 @@ fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
                 "1" | "2" | "3" => "",
                 "OT" => "ot",
                 "SO" => "so",
+                // The default case is "ot" because the only ones
+                // with chars should be OT and SO and this matches
+                // Any digit larger than 3.
+                // If other periods occur, new arms should be added
                 _ => "ot",
             }
         }
