@@ -16,6 +16,8 @@ use structopt::StructOpt;
 
 use itertools::{EitherOrBoth::*, Itertools};
 
+const SHOOTOUT_MINUTE: u64 = 65;
+
 #[derive(Debug)]
 struct Goal {
     scorer: String,
@@ -191,7 +193,7 @@ fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
         .into_iter()
         .map(|goal| {
             let minute = match goal["period"].as_str().unwrap() {
-                "SO" => 65,
+                "SO" => SHOOTOUT_MINUTE,
                 _ => format_minute(
                     goal["min"].as_u64().unwrap(),
                     &goal["period"].as_str().unwrap(),
@@ -239,12 +241,12 @@ fn print_game(game: &Game) {
     let home_scores: Vec<&Goal> = game
         .goals
         .iter()
-        .filter(|goal| goal.team == game.home && goal.minute != 65)
+        .filter(|goal| goal.team == game.home && goal.minute != SHOOTOUT_MINUTE)
         .collect::<Vec<&Goal>>();
     let away_scores: Vec<&Goal> = game
         .goals
         .iter()
-        .filter(|goal| goal.team == game.away && goal.minute != 65)
+        .filter(|goal| goal.team == game.away && goal.minute != SHOOTOUT_MINUTE)
         .collect::<Vec<&Goal>>();
 
     let mut shootout_scorer = None;
