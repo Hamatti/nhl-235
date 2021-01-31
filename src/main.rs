@@ -157,22 +157,16 @@ fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
 
     let all_goals = game_json["goals"].as_array().unwrap_or(&empty); // This could be empty, thus return None
 
-    let special_str = match all_goals.len() {
+    let special = match all_goals.len() {
         0 => "",
         _ => {
-            let special = all_goals.last().unwrap();
-            let result = special["period"].as_str().unwrap();
-            match result {
+            let last_goal = all_goals.last().unwrap();
+            let period = last_goal["period"].as_str().unwrap();
+            match period {
                 "OT" => "ot",
                 "SO" => "so",
-                _ => {
-                    let period = result.parse().unwrap_or(0);
-                    if period > 3 {
-                        "ot"
-                    } else {
-                        ""
-                    }
-                }
+                "1" | "2" | "3" => "",
+                _ => "ot",
             }
         }
     };
@@ -204,13 +198,14 @@ fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
             };
         })
         .collect::<Vec<Goal>>();
+
     let game = Game {
         home: String::from(*home_team),
         away: String::from(*away_team),
         score: score.to_owned(),
         goals: goals,
         status: String::from(game_json["status"]["state"].as_str().unwrap()),
-        special: String::from(special_str),
+        special: String::from(special),
     };
 
     Some(game)
