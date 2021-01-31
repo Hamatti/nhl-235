@@ -239,12 +239,12 @@ fn print_game(game: &Game) {
     let home_scores: Vec<&Goal> = game
         .goals
         .iter()
-        .filter(|goal| goal.team == (&game).home && goal.minute != 65)
+        .filter(|goal| goal.team == game.home && goal.minute != 65)
         .collect::<Vec<&Goal>>();
     let away_scores: Vec<&Goal> = game
         .goals
         .iter()
-        .filter(|goal| goal.team == (&game).away && goal.minute != 65)
+        .filter(|goal| goal.team == game.away && goal.minute != 65)
         .collect::<Vec<&Goal>>();
 
     let mut shootout_scorer = None;
