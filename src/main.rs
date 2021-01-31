@@ -60,8 +60,8 @@ fn translate_team_name(abbr: &str) -> String {
         "BOS" => "Boston",
         "BUF" => "Buffalo",
         "NJD" => "New Jersey",
-        "NYI" => "NY Islanders",
-        "NYR" => "NY Rangers",
+        "NYI" => "NY Islanders", // Islanders is named like this to differentiate two New York teams
+        "NYR" => "NY Rangers",   // Rangers is named like this to differentiate two New York teams
         "PHI" => "Philadelphia",
         "PIT" => "Pittsburgh",
         "WSH" => "Washington",
