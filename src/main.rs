@@ -19,9 +19,7 @@ use itertools::{EitherOrBoth::*, Itertools};
 #[derive(Debug)]
 struct Goal {
     scorer: String,
-    finn_assist: String,
     minute: u64,
-    finn: bool,
     special: bool,
     team: String,
 }
@@ -47,15 +45,18 @@ fn main() {
     if args.version {
         println!("{}", env!("CARGO_PKG_VERSION"));
     } else {
-        match api() {
-            Ok(_) => (),
+        match fetch_games() {
+            Ok(scores) => {
+                let parsed_games = parse_games(scores);
+                print_games(parsed_games);
+            }
             Err(err) => println!("{:?}", err),
         };
     }
 }
 
 fn translate_team_name(abbr: &str) -> String {
-    let str_form = match abbr {
+    let city = match abbr {
         "BOS" => "Boston",
         "BUF" => "Buffalo",
         "NJD" => "New Jersey",
@@ -90,29 +91,32 @@ fn translate_team_name(abbr: &str) -> String {
         _ => "[unknown]",
     };
 
-    String::from(str_form)
+    String::from(city)
 }
 
 #[tokio::main]
-async fn api() -> Result<(), Error> {
+async fn fetch_games() -> Result<serde_json::Value, Error> {
     let request_url = String::from("https://nhl-score-api.herokuapp.com/api/scores/latest");
     let response = reqwest::get(&request_url).await?;
     let scores: serde_json::Value = response.json().await?;
 
+    Ok(scores)
+}
+
+fn parse_games(scores: serde_json::Value) -> Vec<Option<Game>> {
     let games = scores["games"].as_array().unwrap();
 
-    let itergames = games.iter();
-
-    let _results = itergames
+    games
+        .iter()
         .map(|game| parse_game(&game))
-        .collect::<Vec<Option<Game>>>();
+        .collect::<Vec<Option<Game>>>()
+}
 
-    _results.into_iter().for_each(|game| match game {
+fn print_games(games: Vec<Option<Game>>) {
+    games.into_iter().for_each(|game| match game {
         Some(game) => print_game(&game),
         None => (),
     });
-
-    Ok(())
 }
 
 fn format_minute(min: u64, period: &str) -> u64 {
@@ -195,8 +199,6 @@ fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
             return Goal {
                 scorer: scorer,
                 minute: raw_min,
-                finn: false,                   // @TODO: Figure this out
-                finn_assist: String::from(""), // @TODO: Figure this out,
                 team: goal["team"].to_string().replace("\"", ""),
                 special: is_special(goal),
             };
@@ -249,34 +251,32 @@ fn print_game(game: &Game) {
     }
 
     // Print scores
-    let score_iter = home_scores.into_iter().zip_longest(away_scores.into_iter());
-    for pair in score_iter {
+    let score_pairs = home_scores.into_iter().zip_longest(away_scores.into_iter());
+    for pair in score_pairs {
         match pair {
-            Both(l, r) => print_full(l, r),
-            Left(l) => print_left(l),
-            Right(r) => print_right(r),
+            Both(home, away) => print_both_goals(home, away),
+            Left(home) => print_home_goal(home),
+            Right(away) => print_away_goal(away),
         }
     }
 
     // Game-winning shootout goal is always on its own line because
     // the game must be tied before it so it's safe to print it after everything.
     // If we later add assists by Finns, this needs to be rewritten.
-    if let Some(so) = shootout_scorer {
-        if so.team == game.home {
-            print_left(so)
+    if let Some(shootout_goal) = shootout_scorer {
+        if shootout_goal.team == game.home {
+            print_home_goal(shootout_goal)
         } else {
-            print_right(so)
+            print_away_goal(shootout_goal)
         }
     }
     println!();
 }
 
-fn print_full(home: &Goal, away: &Goal) {
+fn print_both_goals(home: &Goal, away: &Goal) {
     let home_message = format!("{:<15} {:>2} ", home.scorer, home.minute);
     if home.special {
         magenta!("{}", home_message);
-    } else if home.finn {
-        green!("{}", home_message);
     } else {
         cyan!("{}", home_message);
     }
@@ -284,33 +284,27 @@ fn print_full(home: &Goal, away: &Goal) {
     let away_message = format!("{:<15} {:>2}", away.scorer, away.minute);
     if away.special {
         magenta_ln!("{}", away_message);
-    } else if away.finn {
-        green_ln!("{}", away_message);
     } else {
         cyan_ln!("{}", away_message);
     }
 }
 
-fn print_left(home: &Goal) {
+fn print_home_goal(home: &Goal) {
     let message = format!("{:<15} {:>2}", home.scorer, home.minute);
     if home.special {
         magenta_ln!("{}", message);
-    } else if home.finn {
-        green_ln!("{}", message);
     } else {
         cyan_ln!("{}", message);
     }
 }
 
-fn print_right(away: &Goal) {
+fn print_away_goal(away: &Goal) {
     let message = format!(
         "{:<15} {:>2} {:<15} {:>2}",
         "", "", away.scorer, away.minute
     );
     if away.special {
         magenta_ln!("{}", message);
-    } else if away.finn {
-        green_ln!("{}", message);
     } else {
         cyan_ln!("{}", message);
     }
