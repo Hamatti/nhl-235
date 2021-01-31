@@ -155,7 +155,7 @@ fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
 
     let empty: Vec<serde_json::Value> = Vec::new();
 
-    let all_goals = game_json["goals"].as_array().unwrap_or(&empty); // This could be empty, thus return None
+    let all_goals = game_json["goals"].as_array().unwrap_or(&empty);
 
     let special = match all_goals.len() {
         0 => "",
