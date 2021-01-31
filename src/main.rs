@@ -163,9 +163,9 @@ fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
             let last_goal = all_goals.last().unwrap();
             let period = last_goal["period"].as_str().unwrap();
             match period {
+                "1" | "2" | "3" => "",
                 "OT" => "ot",
                 "SO" => "so",
-                "1" | "2" | "3" => "",
                 _ => "ot",
             }
         }
