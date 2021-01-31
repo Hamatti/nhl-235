@@ -171,13 +171,12 @@ fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
         }
     };
 
-    let score = format!("{}-{}", home_score, away_score);
     let goals: &Vec<serde_json::Value> = game_json["goals"].as_array().unwrap();
 
     let goals = goals
         .into_iter()
         .map(|goal| {
-            let raw_min = match goal["period"].as_str().unwrap() {
+            let minute = match goal["period"].as_str().unwrap() {
                 "SO" => 65,
                 _ => format_minute(
                     goal["min"].as_u64().unwrap(),
@@ -185,6 +184,11 @@ fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
                 ),
             };
 
+            // Remove the first part of player's name.
+            // This is not always correct since a player
+            // can have multiple first names but it's a
+            // tradeoff since we don't have data on that
+            // and full name would be too long
             let scorer = goal["scorer"]["player"].as_str().unwrap();
             let scorer = scorer.split(" ").collect::<Vec<&str>>();
             let scorer = scorer[1..scorer.len()].to_vec();
@@ -192,13 +196,14 @@ fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
 
             return Goal {
                 scorer: scorer,
-                minute: raw_min,
+                minute: minute,
                 team: goal["team"].to_string().replace("\"", ""),
                 special: is_special(goal),
             };
         })
         .collect::<Vec<Goal>>();
 
+    let score = format!("{}-{}", home_score, away_score);
     let game = Game {
         home: String::from(*home_team),
         away: String::from(*away_team),
