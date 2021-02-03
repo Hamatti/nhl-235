@@ -16,12 +16,12 @@ use structopt::StructOpt;
 
 use itertools::{EitherOrBoth::*, Itertools};
 
+const SHOOTOUT_MINUTE: u64 = 65;
+
 #[derive(Debug)]
 struct Goal {
     scorer: String,
-    finn_assist: String,
     minute: u64,
-    finn: bool,
     special: bool,
     team: String,
 }
@@ -47,20 +47,23 @@ fn main() {
     if args.version {
         println!("{}", env!("CARGO_PKG_VERSION"));
     } else {
-        match api() {
-            Ok(_) => (),
+        match fetch_games() {
+            Ok(scores) => {
+                let parsed_games = parse_games(scores);
+                print_games(parsed_games);
+            }
             Err(err) => println!("{:?}", err),
         };
     }
 }
 
 fn translate_team_name(abbr: &str) -> String {
-    let str_form = match abbr {
+    let city = match abbr {
         "BOS" => "Boston",
         "BUF" => "Buffalo",
         "NJD" => "New Jersey",
-        "NYI" => "NY Islanders",
-        "NYR" => "NY Rangers",
+        "NYI" => "NY Islanders", // Islanders is named like this to differentiate two New York teams
+        "NYR" => "NY Rangers",   // Rangers is named like this to differentiate two New York teams
         "PHI" => "Philadelphia",
         "PIT" => "Pittsburgh",
         "WSH" => "Washington",
@@ -90,40 +93,52 @@ fn translate_team_name(abbr: &str) -> String {
         _ => "[unknown]",
     };
 
-    String::from(str_form)
+    String::from(city)
 }
 
 #[tokio::main]
-async fn api() -> Result<(), Error> {
+async fn fetch_games() -> Result<serde_json::Value, Error> {
     let request_url = String::from("https://nhl-score-api.herokuapp.com/api/scores/latest");
     let response = reqwest::get(&request_url).await?;
     let scores: serde_json::Value = response.json().await?;
 
+    Ok(scores)
+}
+
+/// Transforms a JSON structure of multiple games into
+/// a vector of Option<Game> so they can be processed by
+/// other parts of the application
+fn parse_games(scores: serde_json::Value) -> Vec<Option<Game>> {
     let games = scores["games"].as_array().unwrap();
 
-    let itergames = games.iter();
-
-    let _results = itergames
+    games
+        .iter()
         .map(|game| parse_game(&game))
-        .collect::<Vec<Option<Game>>>();
+        .collect::<Vec<Option<Game>>>()
+}
 
-    _results.into_iter().for_each(|game| match game {
+/// Handler function to print multiple Games
+fn print_games(games: Vec<Option<Game>>) {
+    games.into_iter().for_each(|game| match game {
         Some(game) => print_game(&game),
         None => (),
     });
-
-    Ok(())
 }
 
+/// Transforms a combination of min (between 0 and 19) and
+/// period ("OT", "SO" or number > 0 in number form)
+/// into a numeric minute given 20 minute periods
 fn format_minute(min: u64, period: &str) -> u64 {
     if period == "OT" {
         60 + min
     } else {
-        let numeric_period: u64 = period.parse().unwrap();
-        20 * (numeric_period - 1) + min
+        let period: u64 = period.parse().unwrap();
+        20 * (period - 1) + min
     }
 }
 
+/// Returns true if the goal scored was done in
+/// overtime or in a shootout
 fn is_special(goal: &serde_json::Value) -> bool {
     let period = goal["period"].as_str();
     match period {
@@ -135,6 +150,7 @@ fn is_special(goal: &serde_json::Value) -> bool {
     }
 }
 
+/// Transforms a JSON structure of an individual game into a Game
 fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
     if (&game_json["teams"]).is_null() {
         return None;
@@ -151,79 +167,85 @@ fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
 
     let empty: Vec<serde_json::Value> = Vec::new();
 
-    let all_goals = game_json["goals"].as_array().unwrap_or(&empty); // This could be empty, thus return None
+    let all_goals = game_json["goals"].as_array().unwrap_or(&empty);
 
-    let special_str = match all_goals.len() {
-        0 => "",
-        _ => {
-            let special = all_goals.last().unwrap();
-            let result = special["period"].as_str().unwrap();
-            match result {
+    let special = match all_goals.last() {
+        None => "",
+        Some(last_goal) => {
+            let period = last_goal["period"].as_str().unwrap();
+            match period {
+                "1" | "2" | "3" => "",
                 "OT" => "ot",
                 "SO" => "so",
-                _ => {
-                    let period = result.parse().unwrap_or(0);
-                    if period > 3 {
-                        "ot"
-                    } else {
-                        ""
-                    }
-                }
+                // The default case is "ot" because the only ones
+                // with chars should be OT and SO and this matches
+                // Any digit larger than 3.
+                // If other periods occur, new arms should be added
+                _ => "ot",
             }
         }
     };
 
-    let score = format!("{}-{}", home_score, away_score);
     let goals: &Vec<serde_json::Value> = game_json["goals"].as_array().unwrap();
 
     let goals = goals
         .into_iter()
         .map(|goal| {
-            let raw_min = match goal["period"].as_str().unwrap() {
-                "SO" => 65,
+            let minute = match goal["period"].as_str().unwrap() {
+                "SO" => SHOOTOUT_MINUTE,
                 _ => format_minute(
                     goal["min"].as_u64().unwrap(),
                     &goal["period"].as_str().unwrap(),
                 ),
             };
 
-            let scorer = goal["scorer"]["player"].as_str().unwrap();
-            let scorer = scorer.split(" ").collect::<Vec<&str>>();
-            let scorer = scorer[1..scorer.len()].to_vec();
-            let scorer = scorer.join(" ");
+            let scorer = extract_scorer_name(&goal["scorer"]["player"].as_str().unwrap());
 
             return Goal {
                 scorer: scorer,
-                minute: raw_min,
-                finn: false,                   // @TODO: Figure this out
-                finn_assist: String::from(""), // @TODO: Figure this out,
+                minute: minute,
                 team: goal["team"].to_string().replace("\"", ""),
                 special: is_special(goal),
             };
         })
         .collect::<Vec<Goal>>();
+
+    let score = format!("{}-{}", home_score, away_score);
     let game = Game {
         home: String::from(*home_team),
         away: String::from(*away_team),
         score: score.to_owned(),
         goals: goals,
         status: String::from(game_json["status"]["state"].as_str().unwrap()),
-        special: String::from(special_str),
+        special: String::from(special),
     };
 
     Some(game)
+}
+
+/// Attempts to return player's last name
+/// by removing the first part of player's name.
+///
+/// This is not always correct since a player
+/// can have multiple first names but it's a
+/// tradeoff since we don't have data on that
+/// and full name would be too long
+fn extract_scorer_name(name: &str) -> String {
+    let name = name.split(" ").collect::<Vec<&str>>();
+    let name = name[1..name.len()].to_vec();
+    name.join(" ")
 }
 
 fn print_game(game: &Game) {
     let home_scores: Vec<&Goal> = game
         .goals
         .iter()
-        .filter(|goal| goal.team == (&game).home && goal.minute != 65)
+        .filter(|goal| goal.team == game.home && goal.minute != SHOOTOUT_MINUTE)
         .collect::<Vec<&Goal>>();
     let away_scores: Vec<&Goal> = game
         .goals
         .iter()
-        .filter(|goal| goal.team == (&game).away && goal.minute != 65)
+        .filter(|goal| goal.team == game.away && goal.minute != SHOOTOUT_MINUTE)
         .collect::<Vec<&Goal>>();
 
     let mut shootout_scorer = None;
@@ -249,34 +271,32 @@ fn print_game(game: &Game) {
     }
 
     // Print scores
-    let score_iter = home_scores.into_iter().zip_longest(away_scores.into_iter());
-    for pair in score_iter {
+    let score_pairs = home_scores.into_iter().zip_longest(away_scores.into_iter());
+    for pair in score_pairs {
         match pair {
-            Both(l, r) => print_full(l, r),
-            Left(l) => print_left(l),
-            Right(r) => print_right(r),
+            Both(home, away) => print_both_goals(home, away),
+            Left(home) => print_home_goal(home),
+            Right(away) => print_away_goal(away),
         }
     }
 
     // Game-winning shootout goal is always on its own line because
     // the game must be tied before it so it's safe to print it after everything.
     // If we later add assists by Finns, this needs to be rewritten.
-    if let Some(so) = shootout_scorer {
-        if so.team == game.home {
-            print_left(so)
+    if let Some(shootout_goal) = shootout_scorer {
+        if shootout_goal.team == game.home {
+            print_home_goal(shootout_goal)
         } else {
-            print_right(so)
+            print_away_goal(shootout_goal)
         }
     }
     println!();
 }
 
-fn print_full(home: &Goal, away: &Goal) {
+fn print_both_goals(home: &Goal, away: &Goal) {
     let home_message = format!("{:<15} {:>2} ", home.scorer, home.minute);
     if home.special {
         magenta!("{}", home_message);
-    } else if home.finn {
-        green!("{}", home_message);
     } else {
         cyan!("{}", home_message);
     }
@@ -284,33 +304,27 @@ fn print_full(home: &Goal, away: &Goal) {
     let away_message = format!("{:<15} {:>2}", away.scorer, away.minute);
     if away.special {
         magenta_ln!("{}", away_message);
-    } else if away.finn {
-        green_ln!("{}", away_message);
     } else {
         cyan_ln!("{}", away_message);
     }
 }
 
-fn print_left(home: &Goal) {
+fn print_home_goal(home: &Goal) {
     let message = format!("{:<15} {:>2}", home.scorer, home.minute);
     if home.special {
         magenta_ln!("{}", message);
-    } else if home.finn {
-        green_ln!("{}", message);
     } else {
         cyan_ln!("{}", message);
     }
 }
 
-fn print_right(away: &Goal) {
+fn print_away_goal(away: &Goal) {
     let message = format!(
         "{:<15} {:>2} {:<15} {:>2}",
         "", "", away.scorer, away.minute
     );
     if away.special {
         magenta_ln!("{}", message);
-    } else if away.finn {
-        green_ln!("{}", message);
     } else {
         cyan_ln!("{}", message);
     }
@@ -617,5 +631,14 @@ mod tests {
         assert_eq!(parsed_game.special, "ot");
 
         Ok(())
+    }
+
+    #[test]
+    fn it_extracts_player_name_correctly() {
+        assert_eq!(extract_scorer_name("Olli Maatta"), String::from("Maatta"));
+        assert_eq!(
+            extract_scorer_name("James van Riemsdyk"),
+            String::from("van Riemsdyk")
+        );
     }
 }
