@@ -13,6 +13,7 @@ extern crate colour;
 use reqwest::Error;
 use serde_json;
 use structopt::StructOpt;
+use atty::Stream;
 
 use itertools::{EitherOrBoth::*, Itertools};
 
@@ -255,19 +256,36 @@ fn print_game(game: &Game) {
     }
 
     // Print header
-    white!(
-        "{:<15} {:>2} {:<15} {:<2} ",
-        translate_team_name(&game.home[..]),
-        '-',
-        translate_team_name(&game.away[..]),
-        ""
-    );
-    if game.status == "LIVE" {
-        white_ln!("{:>6}", game.score);
-    } else if game.status == "FINAL" {
-        green_ln!("{:>6}", format!("{} {}", game.special, game.score));
-    } else if game.status == "POSTPONED" {
-        white_ln!("{:>6}", "POSTP.");
+    if atty::is(Stream::Stdout) {
+        white!(
+            "{:<15} {:>2} {:<15} {:<2} ",
+            translate_team_name(&game.home[..]),
+            '-',
+            translate_team_name(&game.away[..]),
+            ""
+        );
+        if game.status == "LIVE" {
+            white_ln!("{:>6}", game.score);
+        } else if game.status == "FINAL" {
+            green_ln!("{:>6}", format!("{} {}", game.special, game.score));
+        } else if game.status == "POSTPONED" {
+            white_ln!("{:>6}", "POSTP.");
+        }
+    } else {
+        print!(
+            "{:<15} {:>2} {:<15} {:<2} ",
+            translate_team_name(&game.home[..]),
+            '-',
+            translate_team_name(&game.away[..]),
+            ""
+        );
+        if game.status == "LIVE" {
+            println!("{:>6}", game.score);
+        } else if game.status == "FINAL" {
+            println!("{:>6}", format!("{} {}", game.special, game.score));
+        } else if game.status == "POSTPONED" {
+            println!("{:>6}", "POSTP.");
+        }
     }
 
     // Print scores
@@ -295,26 +313,38 @@ fn print_game(game: &Game) {
 
 fn print_both_goals(home: &Goal, away: &Goal) {
     let home_message = format!("{:<15} {:>2} ", home.scorer, home.minute);
-    if home.special {
-        magenta!("{}", home_message);
+    if atty::is(Stream::Stdout) {
+        if home.special {
+            magenta!("{}", home_message);
+        } else {
+            cyan!("{}", home_message);
+        }
     } else {
-        cyan!("{}", home_message);
+        print!("{}", home_message);
     }
 
     let away_message = format!("{:<15} {:>2}", away.scorer, away.minute);
-    if away.special {
-        magenta_ln!("{}", away_message);
+    if atty::is(Stream::Stdout) {
+        if away.special {
+            magenta_ln!("{}", away_message);
+        } else {
+            cyan_ln!("{}", away_message);
+        }
     } else {
-        cyan_ln!("{}", away_message);
+        println!("{}", away_message);
     }
 }
 
 fn print_home_goal(home: &Goal) {
     let message = format!("{:<15} {:>2}", home.scorer, home.minute);
-    if home.special {
-        magenta_ln!("{}", message);
+    if atty::is(Stream::Stdout) {
+        if home.special {
+            magenta_ln!("{}", message);
+        } else {
+            cyan_ln!("{}", message);
+        }
     } else {
-        cyan_ln!("{}", message);
+        println!("{}", message);
     }
 }
 
@@ -323,10 +353,14 @@ fn print_away_goal(away: &Goal) {
         "{:<15} {:>2} {:<15} {:>2}",
         "", "", away.scorer, away.minute
     );
-    if away.special {
-        magenta_ln!("{}", message);
+    if atty::is(Stream::Stdout) {
+        if away.special {
+            magenta_ln!("{}", message);
+        } else {
+            cyan_ln!("{}", message);
+        }
     } else {
-        cyan_ln!("{}", message);
+        println!("{}", message);
     }
 }
 

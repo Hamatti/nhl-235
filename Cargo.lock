@@ -612,6 +612,7 @@ dependencies = [
 name = "nhl-235"
 version = "0.2.5"
 dependencies = [
+ "atty",
  "colour",
  "itertools",
  "reqwest",
