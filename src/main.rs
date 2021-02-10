@@ -13,6 +13,7 @@ extern crate colour;
 use reqwest::Error;
 use serde_json;
 use structopt::StructOpt;
+use atty::Stream;
 
 use itertools::{EitherOrBoth::*, Itertools};
 
@@ -40,17 +41,23 @@ struct Game {
 struct Cli {
     #[structopt(long)]
     version: bool,
+    #[structopt(long)]
+    nocolors: bool,
 }
 
 fn main() {
     let args = Cli::from_args();
+    // Using an inverse here because default is colors enabled
+    // and I want to keep the API easier to read down the line,
+    // hence colors need to be enabled rather than disabled
+    let use_colors = !args.nocolors;
     if args.version {
         println!("{}", env!("CARGO_PKG_VERSION"));
     } else {
         match fetch_games() {
             Ok(scores) => {
                 let parsed_games = parse_games(scores);
-                print_games(parsed_games);
+                print_games(parsed_games, use_colors);
             }
             Err(err) => println!("{:?}", err),
         };
@@ -118,9 +125,9 @@ fn parse_games(scores: serde_json::Value) -> Vec<Option<Game>> {
 }
 
 /// Handler function to print multiple Games
-fn print_games(games: Vec<Option<Game>>) {
+fn print_games(games: Vec<Option<Game>>, use_colors: bool) {
     games.into_iter().for_each(|game| match game {
-        Some(game) => print_game(&game),
+        Some(game) => print_game(&game, use_colors),
         None => (),
     });
 }
@@ -236,7 +243,7 @@ fn extract_scorer_name(name: &str) -> String {
     name.join(" ")
 }
 
-fn print_game(game: &Game) {
+fn print_game(game: &Game, use_colors: bool) {
     let home_scores: Vec<&Goal> = game
         .goals
         .iter()
@@ -255,28 +262,45 @@ fn print_game(game: &Game) {
     }
 
     // Print header
-    white!(
-        "{:<15} {:>2} {:<15} {:<2} ",
-        translate_team_name(&game.home[..]),
-        '-',
-        translate_team_name(&game.away[..]),
-        ""
-    );
-    if game.status == "LIVE" {
-        white_ln!("{:>6}", game.score);
-    } else if game.status == "FINAL" {
-        green_ln!("{:>6}", format!("{} {}", game.special, game.score));
-    } else if game.status == "POSTPONED" {
-        white_ln!("{:>6}", "POSTP.");
+    if atty::is(Stream::Stdout) && use_colors {
+        white!(
+            "{:<15} {:>2} {:<15} {:<2} ",
+            translate_team_name(&game.home[..]),
+            '-',
+            translate_team_name(&game.away[..]),
+            ""
+        );
+        if game.status == "LIVE" {
+            white_ln!("{:>6}", game.score);
+        } else if game.status == "FINAL" {
+            green_ln!("{:>6}", format!("{} {}", game.special, game.score));
+        } else if game.status == "POSTPONED" {
+            white_ln!("{:>6}", "POSTP.");
+        }
+    } else {
+        print!(
+            "{:<15} {:>2} {:<15} {:<2} ",
+            translate_team_name(&game.home[..]),
+            '-',
+            translate_team_name(&game.away[..]),
+            ""
+        );
+        if game.status == "LIVE" {
+            println!("{:>6}", game.score);
+        } else if game.status == "FINAL" {
+            println!("{:>6}", format!("{} {}", game.special, game.score));
+        } else if game.status == "POSTPONED" {
+            println!("{:>6}", "POSTP.");
+        }
     }
 
     // Print scores
     let score_pairs = home_scores.into_iter().zip_longest(away_scores.into_iter());
     for pair in score_pairs {
         match pair {
-            Both(home, away) => print_both_goals(home, away),
-            Left(home) => print_home_goal(home),
-            Right(away) => print_away_goal(away),
+            Both(home, away) => print_both_goals(home, away, use_colors),
+            Left(home) => print_home_goal(home, use_colors),
+            Right(away) => print_away_goal(away, use_colors),
         }
     }
 
@@ -285,48 +309,64 @@ fn print_game(game: &Game) {
     // If we later add assists by Finns, this needs to be rewritten.
     if let Some(shootout_goal) = shootout_scorer {
         if shootout_goal.team == game.home {
-            print_home_goal(shootout_goal)
+            print_home_goal(shootout_goal, use_colors)
         } else {
-            print_away_goal(shootout_goal)
+            print_away_goal(shootout_goal, use_colors)
         }
     }
     println!();
 }
 
-fn print_both_goals(home: &Goal, away: &Goal) {
+fn print_both_goals(home: &Goal, away: &Goal, use_colors: bool) {
     let home_message = format!("{:<15} {:>2} ", home.scorer, home.minute);
-    if home.special {
-        magenta!("{}", home_message);
+    if atty::is(Stream::Stdout) && use_colors {
+        if home.special {
+            magenta!("{}", home_message);
+        } else {
+            cyan!("{}", home_message);
+        }
     } else {
-        cyan!("{}", home_message);
+        print!("{}", home_message);
     }
 
     let away_message = format!("{:<15} {:>2}", away.scorer, away.minute);
-    if away.special {
-        magenta_ln!("{}", away_message);
+    if atty::is(Stream::Stdout) && use_colors {
+        if away.special {
+            magenta_ln!("{}", away_message);
+        } else {
+            cyan_ln!("{}", away_message);
+        }
     } else {
-        cyan_ln!("{}", away_message);
+        println!("{}", away_message);
     }
 }
 
-fn print_home_goal(home: &Goal) {
+fn print_home_goal(home: &Goal, use_colors: bool) {
     let message = format!("{:<15} {:>2}", home.scorer, home.minute);
-    if home.special {
-        magenta_ln!("{}", message);
+    if atty::is(Stream::Stdout) && use_colors {
+        if home.special {
+            magenta_ln!("{}", message);
+        } else {
+            cyan_ln!("{}", message);
+        }
     } else {
-        cyan_ln!("{}", message);
+        println!("{}", message);
     }
 }
 
-fn print_away_goal(away: &Goal) {
+fn print_away_goal(away: &Goal, use_colors: bool) {
     let message = format!(
         "{:<15} {:>2} {:<15} {:>2}",
         "", "", away.scorer, away.minute
     );
-    if away.special {
-        magenta_ln!("{}", message);
+    if atty::is(Stream::Stdout) && use_colors {
+        if away.special {
+            magenta_ln!("{}", message);
+        } else {
+            cyan_ln!("{}", message);
+        }
     } else {
-        cyan_ln!("{}", message);
+        println!("{}", message);
     }
 }
 
