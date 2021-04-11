@@ -10,10 +10,11 @@
 
 #[macro_use]
 extern crate colour;
+use atty::Stream;
 use reqwest::Error;
 use serde_json;
+use std::process;
 use structopt::StructOpt;
-use atty::Stream;
 
 use itertools::{EitherOrBoth::*, Itertools};
 
@@ -59,8 +60,24 @@ fn main() {
                 let parsed_games = parse_games(scores);
                 print_games(parsed_games, use_colors);
             }
-            Err(err) => println!("{:?}", err),
+            Err(err) => {
+                handle_request_error(err);
+            }
         };
+    }
+}
+
+fn handle_request_error(e: reqwest::Error) {
+    if e.is_connect() {
+        println!("ERROR: Can't connect to the API. It might be because your Internet connection is down.");
+        process::exit(1);
+    } else if e.is_timeout() {
+        println!("ERROR: API timed out. Try again later.");
+        process::exit(1);
+    } else {
+        println!("ERROR: Unknown error.");
+        println!("{:?}", e);
+        process::exit(1);
     }
 }
 
