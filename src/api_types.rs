@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-/* API Response types */
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct APIResponse {
