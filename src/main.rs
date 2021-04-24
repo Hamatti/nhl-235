@@ -11,12 +11,13 @@
 #[macro_use]
 extern crate colour;
 use atty::Stream;
+use itertools::{EitherOrBoth::*, Itertools};
 use reqwest::Error;
+use serde::{Deserialize, Serialize};
 use serde_json;
+use std::collections::HashMap;
 use std::process;
 use structopt::StructOpt;
-
-use itertools::{EitherOrBoth::*, Itertools};
 
 const SHOOTOUT_MINUTE: u64 = 65;
 
@@ -121,10 +122,10 @@ fn translate_team_name(abbr: &str) -> String {
 }
 
 #[tokio::main]
-async fn fetch_games() -> Result<serde_json::Value, Error> {
+async fn fetch_games() -> Result<APIResponse, Error> {
     let request_url = String::from("https://nhl-score-api.herokuapp.com/api/scores/latest");
     let response = reqwest::get(&request_url).await?;
-    let scores: serde_json::Value = response.json().await?;
+    let scores: APIResponse = response.json().await?;
 
     Ok(scores)
 }
@@ -132,12 +133,12 @@ async fn fetch_games() -> Result<serde_json::Value, Error> {
 /// Transforms a JSON structure of multiple games into
 /// a vector of Option<Game> so they can be processed by
 /// other parts of the application
-fn parse_games(scores: serde_json::Value) -> Vec<Option<Game>> {
-    let games = scores["games"].as_array().unwrap();
+fn parse_games(scores: APIResponse) -> Vec<Option<Game>> {
+    let games = scores.games;
 
     games
         .iter()
-        .map(|game| parse_game(&game))
+        .map(|game| parse_game(game))
         .collect::<Vec<Option<Game>>>()
 }
 
@@ -163,41 +164,28 @@ fn format_minute(min: u64, period: &str) -> u64 {
 
 /// Returns true if the goal scored was done in
 /// overtime or in a shootout
-fn is_special(goal: &serde_json::Value) -> bool {
-    let period = goal["period"].as_str();
-    match period {
-        Some(period) => match period.parse::<u64>() {
-            Ok(period) => period >= 4,
-            Err(_) => true,
-        },
-        None => false,
+fn is_special(goal: &GoalResponse) -> bool {
+    match goal.period.parse::<u64>() {
+        Ok(period) => period >= 4,
+        Err(_) => true,
     }
 }
 
 /// Transforms a JSON structure of an individual game into a Game
-fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
-    if (&game_json["teams"]).is_null() {
-        return None;
-    }
-    let home_team = &game_json["teams"]["home"]["abbreviation"].as_str().unwrap();
-    let away_team = &game_json["teams"]["away"]["abbreviation"].as_str().unwrap();
+fn parse_game(game_json: &GameResponse) -> Option<Game> {
+    let home_team = &game_json.teams.home.abbreviation;
+    let away_team = &game_json.teams.away.abbreviation;
 
-    if (&game_json["scores"]).is_null() {
-        return None;
-    }
+    let home_score = &game_json.scores[home_team];
+    let away_score = &game_json.scores[away_team];
 
-    let home_score = &game_json["scores"][home_team];
-    let away_score = &game_json["scores"][away_team];
-
-    let empty: Vec<serde_json::Value> = Vec::new();
-
-    let all_goals = game_json["goals"].as_array().unwrap_or(&empty);
+    let all_goals = &game_json.goals;
 
     let special = match all_goals.last() {
         None => "",
         Some(last_goal) => {
-            let period = last_goal["period"].as_str().unwrap();
-            match period {
+            let period = &last_goal.period;
+            match period.as_str() {
                 "1" | "2" | "3" => "",
                 "OT" => "ot",
                 "SO" => "so",
@@ -210,25 +198,22 @@ fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
         }
     };
 
-    let goals: &Vec<serde_json::Value> = game_json["goals"].as_array().unwrap();
+    let goals: &Vec<GoalResponse> = &game_json.goals;
 
     let goals = goals
         .into_iter()
         .map(|goal| {
-            let minute = match goal["period"].as_str().unwrap() {
+            let minute = match goal.period.as_str() {
                 "SO" => SHOOTOUT_MINUTE,
-                _ => format_minute(
-                    goal["min"].as_u64().unwrap(),
-                    &goal["period"].as_str().unwrap(),
-                ),
+                _ => format_minute(goal.min.unwrap(), &goal.period),
             };
 
-            let scorer = extract_scorer_name(&goal["scorer"]["player"].as_str().unwrap());
+            let scorer = extract_scorer_name(&goal.scorer.player);
 
             return Goal {
                 scorer: scorer,
                 minute: minute,
-                team: goal["team"].to_string().replace("\"", ""),
+                team: goal.team.replace("\"", ""),
                 special: is_special(goal),
             };
         })
@@ -236,11 +221,11 @@ fn parse_game(game_json: &serde_json::Value) -> Option<Game> {
 
     let score = format!("{}-{}", home_score, away_score);
     let game = Game {
-        home: String::from(*home_team),
-        away: String::from(*away_team),
+        home: String::from(home_team),
+        away: String::from(away_team),
         score: score.to_owned(),
         goals: goals,
-        status: String::from(game_json["status"]["state"].as_str().unwrap()),
+        status: String::from(&game_json.status.state),
         special: String::from(special),
     };
 
@@ -407,44 +392,49 @@ mod tests {
 
     #[test]
     fn is_special_works() -> serde_json::Result<()> {
-        let first = r#"{ "team": "CHI", "period": "1" }"#;
-        let second = r#"{ "team": "CHI", "period": "2" }"#;
-        let third = r#"{ "team": "CHI", "period": "3" }"#;
-        let overtime = r#"{ "team": "CHI", "period": "OT" }"#;
-        let shootout = r#"{ "team": "CHI", "period": "SO" }"#;
-        let missing_data = r#"{ "team": "CHI" }"#;
-        let playoff_ot = r#"{ "team": "CHI", "period": "4" }"#;
-        let playoff_ot_2 = r#"{ "team": "CHI", "period": "10" }"#;
-        let wrong_data = r#"{ "team": "CHI", "period": "SP" }"#;
+        let first =
+            r#"{ "team": "CHI", "period": "1", "scorer": { "player": "_", "seasonTotal": 10} }"#;
+        let second =
+            r#"{ "team": "CHI", "period": "2", "scorer": { "player": "_", "seasonTotal": 10}  }"#;
+        let third =
+            r#"{ "team": "CHI", "period": "3", "scorer": { "player": "_", "seasonTotal": 10}  }"#;
+        let overtime =
+            r#"{ "team": "CHI", "period": "OT", "scorer": { "player": "_", "seasonTotal": 10}  }"#;
+        let shootout =
+            r#"{ "team": "CHI", "period": "SO", "scorer": { "player": "_", "seasonTotal": 10}  }"#;
+        let playoff_ot =
+            r#"{ "team": "CHI", "period": "4", "scorer": { "player": "_", "seasonTotal": 10}  }"#;
+        let playoff_ot_2 =
+            r#"{ "team": "CHI", "period": "10", "scorer": { "player": "_", "seasonTotal": 10}  }"#;
+        let wrong_data =
+            r#"{ "team": "CHI", "period": "SP", "scorer": { "player": "_", "seasonTotal": 10}  }"#;
 
-        let goal1: serde_json::Value = serde_json::from_str(&first)?;
-        let goal2: serde_json::Value = serde_json::from_str(&second)?;
-        let goal3: serde_json::Value = serde_json::from_str(&third)?;
-        let goal4: serde_json::Value = serde_json::from_str(&overtime)?;
-        let goal5: serde_json::Value = serde_json::from_str(&shootout)?;
-        let goal6: serde_json::Value = serde_json::from_str(&missing_data)?;
-        let goal7: serde_json::Value = serde_json::from_str(&playoff_ot)?;
-        let goal8: serde_json::Value = serde_json::from_str(&playoff_ot_2)?;
-        let goal9: serde_json::Value = serde_json::from_str(&wrong_data)?;
+        let goal1: GoalResponse = serde_json::from_str(&first)?;
+        let goal2: GoalResponse = serde_json::from_str(&second)?;
+        let goal3: GoalResponse = serde_json::from_str(&third)?;
+        let goal4: GoalResponse = serde_json::from_str(&overtime)?;
+        let goal5: GoalResponse = serde_json::from_str(&shootout)?;
+        let goal6: GoalResponse = serde_json::from_str(&playoff_ot)?;
+        let goal7: GoalResponse = serde_json::from_str(&playoff_ot_2)?;
+        let goal8: GoalResponse = serde_json::from_str(&wrong_data)?;
 
         assert_eq!(is_special(&goal1), false);
         assert_eq!(is_special(&goal2), false);
         assert_eq!(is_special(&goal3), false);
         assert_eq!(is_special(&goal4), true);
         assert_eq!(is_special(&goal5), true);
-        assert_eq!(is_special(&goal6), false);
+        assert_eq!(is_special(&goal6), true);
         assert_eq!(is_special(&goal7), true);
-        assert_eq!(is_special(&goal8), true);
         // I haven't yet really decided what this should be but
         // important thing is that it does not crash the app
-        assert_eq!(is_special(&goal9), true);
+        assert_eq!(is_special(&goal8), true);
 
         Ok(())
     }
 
     #[test]
     fn it_parses_full_live_game_data_correctly() -> serde_json::Result<()> {
-        let test_game = serde_json::from_str(
+        let test_game: GameResponse = serde_json::from_str(
             r#"{"status":{"state":"LIVE","progress":{"currentPeriod":3,"currentPeriodOrdinal":"3rd","currentPeriodTimeRemaining":{"min":12,"sec":21,"pretty":"12:21"}}},"startTime":"2021-01-23T19:00:00Z","goals":[{"team":"TBL","period":"1","scorer":{"player":"Victor Hedman","seasonTotal":1},"assists":[{"player":"Mitchell Stephens","seasonTotal":1},{"player":"Alexander Volkov","seasonTotal":1}],"min":4,"sec":10},{"team":"CBJ","period":"1","scorer":{"player":"Nick Foligno","seasonTotal":3},"assists":[{"player":"Cam Atkinson","seasonTotal":2},{"player":"Michael Del Zotto","seasonTotal":4}],"min":4,"sec":27},{"team":"CBJ","period":"1","scorer":{"player":"Mikhail Grigorenko","seasonTotal":1},"assists":[{"player":"Kevin Stenlund","seasonTotal":1},{"player":"Nathan Gerbe","seasonTotal":1}],"min":10,"sec":3},{"team":"CBJ","period":"1","scorer":{"player":"Vladislav Gavrikov","seasonTotal":1},"assists":[{"player":"Liam Foudy","seasonTotal":2},{"player":"Eric Robinson","seasonTotal":1}],"min":19,"sec":1},{"team":"TBL","period":"1","scorer":{"player":"Ondrej Palat","seasonTotal":3},"assists":[{"player":"Brayden Point","seasonTotal":3},{"player":"Victor Hedman","seasonTotal":4}],"min":19,"sec":46,"strength":"PPG"},{"team":"CBJ","period":"3","scorer":{"player":"Zach Werenski","seasonTotal":1},"assists":[{"player":"Alexandre Texier","seasonTotal":2},{"player":"Boone Jenner","seasonTotal":2}],"min":6,"sec":34}],"scores":{"TBL":2,"CBJ":4},"teams":{"away":{"abbreviation":"TBL","id":14,"locationName":"Tampa Bay","shortName":"Tampa Bay","teamName":"Lightning"},"home":{"abbreviation":"CBJ","id":29,"locationName":"Columbus","shortName":"Columbus","teamName":"Blue Jackets"}},"preGameStats":{"records":{"TBL":{"wins":3,"losses":0,"ot":0},"CBJ":{"wins":1,"losses":2,"ot":2}}},"currentStats":{"records":{"TBL":{"wins":3,"losses":0,"ot":0},"CBJ":{"wins":1,"losses":2,"ot":2}},"streaks":{"TBL":{"type":"WINS","count":3},"CBJ":{"type":"OT","count":2}},"standings":{"TBL":{"divisionRank":"1","leagueRank":"1"},"CBJ":{"divisionRank":"7","leagueRank":"24"}}}}"#,
         )?;
 
@@ -612,18 +602,6 @@ mod tests {
     }
 
     #[test]
-    fn it_parses_missing_teams_data_correctly() -> serde_json::Result<()> {
-        let test_game = serde_json::from_str(
-            r#"{"status":{"state":"LIVE","progress":{"currentPeriod":3,"currentPeriodOrdinal":"3rd","currentPeriodTimeRemaining":{"min":12,"sec":21,"pretty":"12:21"}}},"startTime":"2021-01-23T19:00:00Z","goals":[{"team":"TBL","period":"1","scorer":{"player":"Victor Hedman","seasonTotal":1},"assists":[{"player":"Mitchell Stephens","seasonTotal":1},{"player":"Alexander Volkov","seasonTotal":1}],"min":4,"sec":10},{"team":"CBJ","period":"1","scorer":{"player":"Nick Foligno","seasonTotal":3},"assists":[{"player":"Cam Atkinson","seasonTotal":2},{"player":"Michael Del Zotto","seasonTotal":4}],"min":4,"sec":27},{"team":"CBJ","period":"1","scorer":{"player":"Mikhail Grigorenko","seasonTotal":1},"assists":[{"player":"Kevin Stenlund","seasonTotal":1},{"player":"Nathan Gerbe","seasonTotal":1}],"min":10,"sec":3},{"team":"CBJ","period":"1","scorer":{"player":"Vladislav Gavrikov","seasonTotal":1},"assists":[{"player":"Liam Foudy","seasonTotal":2},{"player":"Eric Robinson","seasonTotal":1}],"min":19,"sec":1},{"team":"TBL","period":"1","scorer":{"player":"Ondrej Palat","seasonTotal":3},"assists":[{"player":"Brayden Point","seasonTotal":3},{"player":"Victor Hedman","seasonTotal":4}],"min":19,"sec":46,"strength":"PPG"},{"team":"CBJ","period":"3","scorer":{"player":"Zach Werenski","seasonTotal":1},"assists":[{"player":"Alexandre Texier","seasonTotal":2},{"player":"Boone Jenner","seasonTotal":2}],"min":6,"sec":34}],"scores":{"TBL":2,"CBJ":4},"preGameStats":{"records":{"TBL":{"wins":3,"losses":0,"ot":0},"CBJ":{"wins":1,"losses":2,"ot":2}}},"currentStats":{"records":{"TBL":{"wins":3,"losses":0,"ot":0},"CBJ":{"wins":1,"losses":2,"ot":2}},"streaks":{"TBL":{"type":"WINS","count":3},"CBJ":{"type":"OT","count":2}},"standings":{"TBL":{"divisionRank":"1","leagueRank":"1"},"CBJ":{"divisionRank":"7","leagueRank":"24"}}}}"#,
-        )?;
-
-        let parsed_game = parse_game(&test_game);
-        assert_eq!(parsed_game.is_some(), false);
-
-        Ok(())
-    }
-
-    #[test]
     fn it_parses_a_playoffs_game_with_overtime_correctly() -> serde_json::Result<()> {
         let test_game = serde_json::from_str(
             r#"
@@ -698,4 +676,111 @@ mod tests {
             String::from("van Riemsdyk")
         );
     }
+}
+
+/* API Response types */
+
+#[derive(Debug, Serialize, Deserialize)]
+struct APIResponse {
+    date: DateResponse,
+    games: Vec<GameResponse>,
+    errors: Option<HashMap<String, serde_json::Value>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct DateResponse {
+    raw: String,
+    pretty: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
+struct GameResponse {
+    status: StatusResponse,
+    startTime: String,
+    goals: Vec<GoalResponse>,
+    scores: HashMap<String, serde_json::Value>,
+    teams: TeamsResponse,
+    preGameStats: PreGameStatsResponse,
+    currentStats: CurrentStatsResponse,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct StatusResponse {
+    state: String,
+    progress: Option<ProgressResponse>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
+struct ProgressResponse {
+    currentPeriod: u64,
+    currentPeriodOrdinal: String,
+    currentPeriodTimeRemaining: CurrentPeriodTimeRemaining,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct CurrentPeriodTimeRemaining {
+    pretty: String,
+    min: u64,
+    sec: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
+struct Scorer {
+    player: String,
+    seasonTotal: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
+struct Assist {
+    player: String,
+    seasonTotal: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
+struct GoalResponse {
+    period: String,
+    scorer: Scorer,
+    team: String,
+    assists: Option<Vec<Assist>>,
+    emptyNet: Option<bool>,
+    min: Option<u64>,
+    sec: Option<u64>,
+    strength: Option<String>,
+}
+#[derive(Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
+struct PreGameStatsResponse {
+    records: HashMap<String, serde_json::Value>,
+    playoffSeries: Option<HashMap<String, serde_json::Value>>,
+    standings: Option<HashMap<String, serde_json::Value>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
+struct CurrentStatsResponse {
+    records: HashMap<String, serde_json::Value>,
+    streaks: HashMap<String, serde_json::Value>,
+    standings: HashMap<String, serde_json::Value>,
+    playoffSeries: Option<HashMap<String, serde_json::Value>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct TeamsResponse {
+    away: TeamResponse,
+    home: TeamResponse,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
+struct TeamResponse {
+    abbreviation: String,
+    id: u64,
+    locationName: String,
+    shortName: String,
+    teamName: String,
 }
