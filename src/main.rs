@@ -75,6 +75,9 @@ fn handle_request_error(e: reqwest::Error) {
     } else if e.is_timeout() {
         println!("ERROR: API timed out. Try again later.");
         process::exit(1);
+    } else if e.is_decode() {
+        println!("ERROR: API returned malformed data. Try again later.");
+        process::exit(1);
     } else {
         println!("ERROR: Unknown error.");
         println!("{:?}", e);
