@@ -13,13 +13,13 @@ extern crate colour;
 use atty::Stream;
 use itertools::{EitherOrBoth::*, Itertools};
 use reqwest::Error;
-use serde::{Deserialize, Serialize};
-use serde_json;
-use std::collections::HashMap;
 use std::process;
 use structopt::StructOpt;
 
 const SHOOTOUT_MINUTE: u64 = 65;
+
+mod api_types;
+use api_types::*;
 
 #[derive(Debug)]
 struct Goal {
@@ -676,111 +676,4 @@ mod tests {
             String::from("van Riemsdyk")
         );
     }
-}
-
-/* API Response types */
-
-#[derive(Debug, Serialize, Deserialize)]
-struct APIResponse {
-    date: DateResponse,
-    games: Vec<GameResponse>,
-    errors: Option<HashMap<String, serde_json::Value>>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct DateResponse {
-    raw: String,
-    pretty: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[allow(non_snake_case)]
-struct GameResponse {
-    status: StatusResponse,
-    startTime: String,
-    goals: Vec<GoalResponse>,
-    scores: HashMap<String, serde_json::Value>,
-    teams: TeamsResponse,
-    preGameStats: PreGameStatsResponse,
-    currentStats: CurrentStatsResponse,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct StatusResponse {
-    state: String,
-    progress: Option<ProgressResponse>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[allow(non_snake_case)]
-struct ProgressResponse {
-    currentPeriod: u64,
-    currentPeriodOrdinal: String,
-    currentPeriodTimeRemaining: CurrentPeriodTimeRemaining,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct CurrentPeriodTimeRemaining {
-    pretty: String,
-    min: u64,
-    sec: u64,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[allow(non_snake_case)]
-struct Scorer {
-    player: String,
-    seasonTotal: u64,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[allow(non_snake_case)]
-struct Assist {
-    player: String,
-    seasonTotal: u64,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[allow(non_snake_case)]
-struct GoalResponse {
-    period: String,
-    scorer: Scorer,
-    team: String,
-    assists: Option<Vec<Assist>>,
-    emptyNet: Option<bool>,
-    min: Option<u64>,
-    sec: Option<u64>,
-    strength: Option<String>,
-}
-#[derive(Debug, Serialize, Deserialize)]
-#[allow(non_snake_case)]
-struct PreGameStatsResponse {
-    records: HashMap<String, serde_json::Value>,
-    playoffSeries: Option<HashMap<String, serde_json::Value>>,
-    standings: Option<HashMap<String, serde_json::Value>>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[allow(non_snake_case)]
-struct CurrentStatsResponse {
-    records: HashMap<String, serde_json::Value>,
-    streaks: HashMap<String, serde_json::Value>,
-    standings: HashMap<String, serde_json::Value>,
-    playoffSeries: Option<HashMap<String, serde_json::Value>>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct TeamsResponse {
-    away: TeamResponse,
-    home: TeamResponse,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[allow(non_snake_case)]
-struct TeamResponse {
-    abbreviation: String,
-    id: u64,
-    locationName: String,
-    shortName: String,
-    teamName: String,
 }
