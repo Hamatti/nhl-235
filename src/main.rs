@@ -19,7 +19,7 @@ use structopt::StructOpt;
 const SHOOTOUT_MINUTE: u64 = 65;
 
 mod api_types;
-use api_types::*;
+use api_types::{APIResponse, GameResponse, GoalResponse};
 
 #[derive(Debug)]
 struct Goal {
