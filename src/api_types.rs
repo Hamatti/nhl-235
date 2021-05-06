@@ -51,7 +51,7 @@ pub struct CurrentPeriodTimeRemaining {
 #[allow(non_snake_case)]
 pub struct Scorer {
     pub player: String,
-    pub seasonTotal: u64,
+    pub seasonTotal: Option<u64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
