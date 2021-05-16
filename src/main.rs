@@ -331,7 +331,7 @@ fn print_game(game: &Game, use_colors: bool) {
             let away_wins = &series_wins[&game.away];
 
             if atty::is(Stream::Stdout) && use_colors {
-                yellow!("Series {}-{}", home_wins, away_wins);
+                yellow_ln!("Series {}-{}", home_wins, away_wins);
             } else {
                 println!("Series {}-{}", home_wins, away_wins);
             }
