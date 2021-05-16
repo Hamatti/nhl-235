@@ -1,6 +1,15 @@
 # Changelog
 
-## 0.3.0 - 2020-01-29
+## 1.0.2 - 2021-05-16
+
+### Added
+- Playoffs series score
+
+### Internal changes
+- Refactored to use Rust structs with JSON data
+- Fixed all CHANGELOG dates to 2021. Had forgotten the year changed.
+
+## 0.3.0 - 2021-01-29
 
 ### Added
 - A flag `--nocolors` that allows users to turn off the colors
@@ -8,34 +17,34 @@
 ### Changed
 - When printing elsewhere than standard out, colors are disabled
 
-## 0.2.5 - 2020-01-29
+## 0.2.5 - 2021-01-29
 
 ### Added
 - Support for playoff overtimes
 
-## 0.2.4 - 2020-01-24
+## 0.2.4 - 2021-01-24
 
 ### Added
 - Display POSTP. for games that have been postponed
 
-## 0.2.3 - 2020-01-24
+## 0.2.3 - 2021-01-24
 
 ### Added
 - Tests for a lot of the codebase
 - Refactoring to make it more error prone
 
-## 0.2.2 - 2020-01-23
+## 0.2.2 - 2021-01-23
 
 ### Fixed
 - A crash when there were games with no goals
 
-## 0.2.1 - 2020-01-23
+## 0.2.1 - 2021-01-23
 
 ### Added
 - README
 - Website at [hamatti.github.io/nhl-235](https://hamatti.github.io/nhl-235)
 
-## 0.2.0 - 2020-01-23
+## 0.2.0 - 2021-01-23
 
 ### Added
 - `--version` flag
@@ -46,7 +55,7 @@
 - Displays Toronto's name correctly
 - Only shows the game-winning shootout goal if multiple goals made
 
-## 0.1.0 - 2020-01-22
+## 0.1.0 - 2021-01-22
 
 ### Initial release
 - Displays game scores from current or previous round
