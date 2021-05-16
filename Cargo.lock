@@ -610,7 +610,7 @@ dependencies = [
 
 [[package]]
 name = "nhl-235"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "atty",
  "colour",
