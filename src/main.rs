@@ -13,6 +13,7 @@ extern crate colour;
 use atty::Stream;
 use itertools::{EitherOrBoth::*, Itertools};
 use reqwest::Error;
+use std::collections::HashMap;
 use std::process;
 use structopt::StructOpt;
 
@@ -37,6 +38,7 @@ struct Game {
     goals: Vec<Goal>,
     status: String,
     special: String,
+    playoff_series: Option<HashMap<String, serde_json::Value>>,
 }
 
 #[derive(StructOpt, Debug)]
@@ -230,6 +232,7 @@ fn parse_game(game_json: &GameResponse) -> Option<Game> {
         goals: goals,
         status: String::from(&game_json.status.state),
         special: String::from(special),
+        playoff_series: game_json.current_stats.playoff_series.clone(),
     };
 
     Some(game)
@@ -320,6 +323,22 @@ fn print_game(game: &Game, use_colors: bool) {
         }
     }
     println!();
+
+    match &game.playoff_series {
+        Some(playoff_series) => {
+            let series_wins = &playoff_series["wins"];
+            let home_wins = &series_wins[&game.home];
+            let away_wins = &series_wins[&game.away];
+
+            if atty::is(Stream::Stdout) && use_colors {
+                yellow!("Series {}-{}", home_wins, away_wins);
+            } else {
+                println!("Series {}-{}", home_wins, away_wins);
+            }
+            println!();
+        }
+        None => (),
+    }
 }
 
 fn print_both_goals(home: &Goal, away: &Goal, use_colors: bool) {
