@@ -85,7 +85,7 @@ pub struct PreGameStatsResponse {
 #[serde(rename_all = "camelCase")]
 pub struct CurrentStatsResponse {
     pub records: HashMap<String, serde_json::Value>,
-    pub streaks: HashMap<String, serde_json::Value>,
+    pub streaks: Option<HashMap<String, serde_json::Value>>,
     pub standings: HashMap<String, serde_json::Value>,
     pub playoff_series: Option<HashMap<String, serde_json::Value>>,
 }
