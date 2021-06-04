@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.4 - 2021-06-04
+
+### Fixed
+- A bug where playoff overtime goal scored at 65 minutes would not show up.
+
 ## 1.0.2 - 2021-05-16
 
 ### Added
