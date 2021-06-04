@@ -255,12 +255,20 @@ fn print_game(game: &Game, use_colors: bool) {
     let home_scores: Vec<&Goal> = game
         .goals
         .iter()
-        .filter(|goal| goal.team == game.home && goal.minute != SHOOTOUT_MINUTE)
+        .filter(|goal| {
+            goal.team == game.home
+                && (goal.minute != SHOOTOUT_MINUTE
+                    || goal.minute == SHOOTOUT_MINUTE && game.special == "ot")
+        })
         .collect::<Vec<&Goal>>();
     let away_scores: Vec<&Goal> = game
         .goals
         .iter()
-        .filter(|goal| goal.team == game.away && goal.minute != SHOOTOUT_MINUTE)
+        .filter(|goal| {
+            goal.team == game.away
+                && (goal.minute != SHOOTOUT_MINUTE
+                    || goal.minute == SHOOTOUT_MINUTE && game.special == "ot")
+        })
         .collect::<Vec<&Goal>>();
 
     let mut shootout_scorer = None;
