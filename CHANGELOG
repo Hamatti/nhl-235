@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0 - 2021-10-10
+
+### Fixed
+- Print "No games" if there are no games
+
+### Added
+- Seattle Kraken as a new team for 2021-22 season
+
 ## 1.0.4 - 2021-06-04
 
 ### Fixed
