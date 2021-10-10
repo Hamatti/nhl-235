@@ -121,6 +121,7 @@ fn translate_team_name(abbr: &str) -> String {
         "TOR" => "Toronto",
         "VAN" => "Vancouver",
         "WPG" => "Winnipeg",
+        "SEA" => "Seattle",
         _ => "[unknown]",
     };
 
