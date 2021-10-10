@@ -79,6 +79,7 @@ fn handle_request_error(e: reqwest::Error) {
         process::exit(1);
     } else if e.is_decode() {
         println!("ERROR: API returned malformed data. Try again later.");
+        println!("{:?}", e);
         process::exit(1);
     } else {
         println!("ERROR: Unknown error.");
@@ -149,10 +150,15 @@ fn parse_games(scores: APIResponse) -> Vec<Option<Game>> {
 
 /// Handler function to print multiple Games
 fn print_games(games: Vec<Option<Game>>, use_colors: bool) {
-    games.into_iter().for_each(|game| match game {
-        Some(game) => print_game(&game, use_colors),
-        None => (),
-    });
+    match games.len() {
+        0 => println!("No games today."),
+        _ => {
+            games.into_iter().for_each(|game| match game {
+                Some(game) => print_game(&game, use_colors),
+                None => (),
+            });
+        }
+    }
 }
 
 /// Transforms a combination of min (between 0 and 19) and
