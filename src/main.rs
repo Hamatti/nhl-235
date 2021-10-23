@@ -191,7 +191,12 @@ fn parse_game(game_json: &GameResponse) -> Option<Game> {
     let home_score = &game_json.scores[home_team];
     let away_score = &game_json.scores[away_team];
 
-    let all_goals = &game_json.goals;
+    let empty_vec: &Vec<GoalResponse> = &Vec::<GoalResponse>::new();
+
+    let all_goals = match &game_json.goals {
+        Some(goals) => goals,
+        None => &empty_vec,
+    };
 
     let special = match all_goals.last() {
         None => "",
@@ -210,7 +215,7 @@ fn parse_game(game_json: &GameResponse) -> Option<Game> {
         }
     };
 
-    let goals: &Vec<GoalResponse> = &game_json.goals;
+    let goals: &Vec<GoalResponse> = all_goals;
 
     let goals = goals
         .into_iter()
@@ -595,35 +600,34 @@ mod tests {
                     "state":"LIVE"
                 },
                 "startTime":"2021-01-23T19:00:00Z",
-                "goals":[],
-                    "scores":{
-                        "PIT":0,"TOR":0
+                "scores":{
+                    "PIT":0,"TOR":0
+                },
+                "teams":{
+                    "away":{
+                        "abbreviation":"PIT",
+                        "id":14,
+                        "locationName":"Pittsburgh",
+                        "shortName":"Pittsburgh",
+                        "teamName":"Penguins"
                     },
-                    "teams":{
-                        "away":{
-                            "abbreviation":"PIT",
-                            "id":14,
-                            "locationName":"Pittsburgh",
-                            "shortName":"Pittsburgh",
-                            "teamName":"Penguins"
-                        },
-                        "home":{
-                            "abbreviation":"TOR",
-                            "id":29,
-                            "locationName":"Toronto",
-                            "shortName":"Toronto",
-                            "teamName":"Maple Leafs"
-                        }
-                    },
-                    "preGameStats":{"records":{"PIT":{"wins":3,"losses":0,"ot":0},"TOR":{"wins":1,"losses":2,"ot":2}}},
-                    "currentStats":{"records":{"PIT":{"wins":4,"losses":0,"ot":0},"TOR":{"wins":1,"losses":2,"ot":3}},
-                    "streaks":{"PIT":{"type":"WINS","count":3},"TOR":{"type":"OT","count":2}},
-                    "standings":{
-                        "PIT":{"divisionRank":"1","leagueRank":"1"},
-                        "CBJ":{"divisionRank":"7","leagueRank":"24"}
+                    "home":{
+                        "abbreviation":"TOR",
+                        "id":29,
+                        "locationName":"Toronto",
+                        "shortName":"Toronto",
+                        "teamName":"Maple Leafs"
                     }
+                },
+                "preGameStats":{"records":{"PIT":{"wins":3,"losses":0,"ot":0},"TOR":{"wins":1,"losses":2,"ot":2}}},
+                "currentStats":{"records":{"PIT":{"wins":4,"losses":0,"ot":0},"TOR":{"wins":1,"losses":2,"ot":3}},
+                "streaks":{"PIT":{"type":"WINS","count":3},"TOR":{"type":"OT","count":2}},
+                "standings":{
+                    "PIT":{"divisionRank":"1","leagueRank":"1"},
+                    "CBJ":{"divisionRank":"7","leagueRank":"24"}
                 }
-            }"#,
+            }
+        }"#,
         )?;
 
         let parsed_game = parse_game(&test_game).unwrap();

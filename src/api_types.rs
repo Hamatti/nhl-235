@@ -19,7 +19,7 @@ pub struct DateResponse {
 pub struct GameResponse {
     pub status: StatusResponse,
     pub start_time: String,
-    pub goals: Vec<GoalResponse>,
+    pub goals: Option<Vec<GoalResponse>>,
     pub scores: HashMap<String, serde_json::Value>,
     pub teams: TeamsResponse,
     pub pre_game_stats: PreGameStatsResponse,
