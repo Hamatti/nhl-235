@@ -38,6 +38,16 @@ Store the file with filename `235` in a folder that is in the path.
 235
 ```
 
+### Highlight favorite players
+
+235 (from `1.2.0` onwards) supports configurable highlights of individual players.
+
+To do this, you first need to create a config file to your home directory called `.235.config` and then call the script with
+
+```
+235 --highlight
+```
+
 ### Current version
 
 ```
