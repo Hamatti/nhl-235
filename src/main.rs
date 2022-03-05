@@ -11,9 +11,13 @@
 #[macro_use]
 extern crate colour;
 use atty::Stream;
+use dirs::home_dir;
 use itertools::{EitherOrBoth::*, Itertools};
 use reqwest::Error;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Error as StdError;
+use std::io::Read;
 use std::process;
 use structopt::StructOpt;
 
@@ -47,6 +51,8 @@ struct Cli {
     version: bool,
     #[structopt(long)]
     nocolors: bool,
+    #[structopt(long)]
+    highlight: bool,
 }
 
 fn main() {
@@ -58,16 +64,38 @@ fn main() {
     if args.version {
         println!("{}", env!("CARGO_PKG_VERSION"));
     } else {
+        let highlights = if args.highlight {
+            read_highlight_config().unwrap_or_default()
+        } else {
+            Vec::new()
+        };
         match fetch_games() {
             Ok(scores) => {
                 let parsed_games = parse_games(scores);
-                print_games(parsed_games, use_colors);
+                print_games(parsed_games, use_colors, &highlights);
             }
             Err(err) => {
                 handle_request_error(err);
             }
         };
     }
+}
+
+fn read_highlight_config() -> Result<Vec<String>, StdError> {
+    let mut config_file = home_dir().unwrap();
+    config_file.push(".235.config");
+
+    let mut file = File::open(config_file.as_path())?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+
+    let highlights: Vec<String> = contents
+        .split('\n')
+        .map(str::to_string)
+        .filter(|s| s != "")
+        .collect();
+
+    Ok(highlights)
 }
 
 fn handle_request_error(e: reqwest::Error) {
@@ -150,12 +178,12 @@ fn parse_games(scores: APIResponse) -> Vec<Option<Game>> {
 }
 
 /// Handler function to print multiple Games
-fn print_games(games: Vec<Option<Game>>, use_colors: bool) {
+fn print_games(games: Vec<Option<Game>>, use_colors: bool, highlights: &[String]) {
     match games.len() {
         0 => println!("No games today."),
         _ => {
             games.into_iter().for_each(|game| match game {
-                Some(game) => print_game(&game, use_colors),
+                Some(game) => print_game(&game, use_colors, &highlights),
                 None => (),
             });
         }
@@ -263,7 +291,7 @@ fn extract_scorer_name(name: &str) -> String {
     name.join(" ")
 }
 
-fn print_game(game: &Game, use_colors: bool) {
+fn print_game(game: &Game, use_colors: bool, highlights: &[String]) {
     let home_scores: Vec<&Goal> = game
         .goals
         .iter()
@@ -326,9 +354,9 @@ fn print_game(game: &Game, use_colors: bool) {
     let score_pairs = home_scores.into_iter().zip_longest(away_scores.into_iter());
     for pair in score_pairs {
         match pair {
-            Both(home, away) => print_both_goals(home, away, use_colors),
-            Left(home) => print_home_goal(home, use_colors),
-            Right(away) => print_away_goal(away, use_colors),
+            Both(home, away) => print_both_goals(home, away, use_colors, highlights),
+            Left(home) => print_home_goal(home, use_colors, highlights),
+            Right(away) => print_away_goal(away, use_colors, highlights),
         }
     }
 
@@ -337,9 +365,9 @@ fn print_game(game: &Game, use_colors: bool) {
     // If we later add assists by Finns, this needs to be rewritten.
     if let Some(shootout_goal) = shootout_scorer {
         if shootout_goal.team == game.home {
-            print_home_goal(shootout_goal, use_colors)
+            print_home_goal(shootout_goal, use_colors, highlights)
         } else {
-            print_away_goal(shootout_goal, use_colors)
+            print_away_goal(shootout_goal, use_colors, highlights)
         }
     }
     println!();
@@ -361,11 +389,13 @@ fn print_game(game: &Game, use_colors: bool) {
     }
 }
 
-fn print_both_goals(home: &Goal, away: &Goal, use_colors: bool) {
+fn print_both_goals(home: &Goal, away: &Goal, use_colors: bool, highlights: &[String]) {
     let home_message = format!("{:<15} {:>2} ", home.scorer, home.minute);
     if atty::is(Stream::Stdout) && use_colors {
         if home.special {
             magenta!("{}", home_message);
+        } else if highlights.contains(&home.scorer) {
+            yellow!("{}", home_message);
         } else {
             cyan!("{}", home_message);
         }
@@ -377,6 +407,8 @@ fn print_both_goals(home: &Goal, away: &Goal, use_colors: bool) {
     if atty::is(Stream::Stdout) && use_colors {
         if away.special {
             magenta_ln!("{}", away_message);
+        } else if highlights.contains(&away.scorer) {
+            yellow_ln!("{}", away_message);
         } else {
             cyan_ln!("{}", away_message);
         }
@@ -385,11 +417,13 @@ fn print_both_goals(home: &Goal, away: &Goal, use_colors: bool) {
     }
 }
 
-fn print_home_goal(home: &Goal, use_colors: bool) {
+fn print_home_goal(home: &Goal, use_colors: bool, highlights: &[String]) {
     let message = format!("{:<15} {:>2}", home.scorer, home.minute);
     if atty::is(Stream::Stdout) && use_colors {
         if home.special {
             magenta_ln!("{}", message);
+        } else if highlights.contains(&home.scorer) {
+            yellow_ln!("{}", message);
         } else {
             cyan_ln!("{}", message);
         }
@@ -398,7 +432,7 @@ fn print_home_goal(home: &Goal, use_colors: bool) {
     }
 }
 
-fn print_away_goal(away: &Goal, use_colors: bool) {
+fn print_away_goal(away: &Goal, use_colors: bool, highlights: &[String]) {
     let message = format!(
         "{:<15} {:>2} {:<15} {:>2}",
         "", "", away.scorer, away.minute
@@ -406,6 +440,8 @@ fn print_away_goal(away: &Goal, use_colors: bool) {
     if atty::is(Stream::Stdout) && use_colors {
         if away.special {
             magenta_ln!("{}", message);
+        } else if highlights.contains(&away.scorer) {
+            yellow_ln!("{}", message);
         } else {
             cyan_ln!("{}", message);
         }
