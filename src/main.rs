@@ -46,12 +46,16 @@ struct Game {
 }
 
 #[derive(StructOpt, Debug)]
+#[structopt(about = "235 - See NHL results on your command line")]
 struct Cli {
-    #[structopt(long)]
+    #[structopt(long, help = "Display current version.")]
     version: bool,
-    #[structopt(long)]
+    #[structopt(long, help = "Do not use colors.")]
     nocolors: bool,
-    #[structopt(long)]
+    #[structopt(
+        long,
+        help = "Highlight favorite players listed in ~/.235.config file."
+    )]
     highlight: bool,
 }
 

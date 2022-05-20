@@ -44,9 +44,28 @@ Store the file with filename `235` in a folder that is in the path.
 
 To do this, you first need to create a config file to your home directory called `.235.config` and then call the script with
 
+The `.235.config` file should list one last name per line, for example:
+
+```
+Laine
+Barkov
+Aho
+Teravainen
+Kapanen
+Kotkaniemi
+Rantanen
+Lundell
+```
+
+so when you run
+
 ```
 235 --highlight
 ```
+
+it'll highlight those players in different color.
+
+_Please note, this currently works in a very simplified way so there's no way to differentiate between players who share a last name. [See issue #39](https://github.com/Hamatti/nhl-235/issues/39) for details._
 
 ### Current version
 
