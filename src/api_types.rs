@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct APIResponse {
-    pub date: DateResponse,
+    pub date: Option<DateResponse>,
     pub games: Vec<GameResponse>,
     pub errors: Option<HashMap<String, serde_json::Value>>,
 }
