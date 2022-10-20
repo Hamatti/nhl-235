@@ -46,12 +46,20 @@ struct Game {
 }
 
 #[derive(StructOpt, Debug)]
+/// Display live or previous NHL match results on command line
+///
+/// Homepage: https://hamatti.github.io/nhl-235/
+///
+/// Open source under MIT license
 struct Cli {
     #[structopt(long)]
+    #[structopt(help = "Current version")]
     version: bool,
     #[structopt(long)]
+    #[structopt(help = "Disable terminal colors")]
     nocolors: bool,
     #[structopt(long)]
+    #[structopt(help = "Highlight players based on $HOME/.235.config file. If --nocolors is enabled, does nothing")]
     highlight: bool,
 }
 

@@ -1,114 +1,189 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>235 - hockey results with a familiar feel</title>
-    <link rel="preconnect" href="https://fonts.gstatic.com" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap"
-      rel="stylesheet"
-    />
 
-    <meta
-      property="og:title"
-      content="235 - hockey results with a familiar feel"
-    />
-    <meta property="og:url" content="https://hamatti.github.io/nhl-235" />
-    <meta
-      property="og:description"
-      content="A CLI tool to get NHL results to your terminal with a familiar 235 feeling"
-    />
-    <meta
-      property="og:image"
-      content="https://hamatti.github.io/nhl-235-banner.png"
-    />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>235 - hockey results with a familiar feel</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap" rel="stylesheet" />
 
-    <style>
-      body {
-        background: black;
-        color: white;
-        font-size: 30px;
-        font-family: "Fira Code", monospace;
-      }
+  <meta property="og:title" content="235 - hockey results with a familiar feel" />
+  <meta property="og:url" content="https://hamatti.github.io/nhl-235" />
+  <meta property="og:description"
+    content="A CLI tool to get NHL results to your terminal with a familiar 235 feeling" />
+  <meta property="og:image" content="https://hamatti.github.io/nhl-235-banner.png" />
 
-      main {
-        text-align: center;
-        width: 60%;
-        margin: auto;
-      }
-      img {
-        display: block;
-        margin: auto;
-      }
-      pre {
-        background: #ccc;
-        color: black;
-        width: 80%;
-        display: block;
-        margin: auto;
-        text-align: left;
-        padding: 0.5em;
-        font-size: 0.7em;
-      }
-      a,
-      a:visited {
-        color: white;
-      }
-    </style>
-  </head>
-  <body>
-    <main>
-      <img
-        src="nhl-235-banner.png"
-        alt="235 - hockey results with a familiar feel "
-      />
-      <h1 style="margin-bottom: -2%">235</h1>
-      <p style="font-size: 0.8em">hockey results with a familiar feel</p>
+  <link rel="stylesheet" href="main.css" />
+</head>
+
+<body>
+  <header>
+    <img src="nhl-235-banner.png" alt="" />
+    <h1>235</h1>
+    <p class="tagline">hockey results with a familiar feel</p>
+  </header>
+  <main>
+    <section>
+      <p>Get your NHL results directly to your terminal.</p>
 
       <p>
         For decades, 235 has been part of a morning routine for countless
         Finnish hockey fans. This project has been inspired by the work done by
-        YLE Tekstitv team in providing hockey fans NHL results each night and
+        <a href="https://yle.fi/aihe/tekstitv?P=235" target="_blank" rel="nofollow noreferrer">YLE Tekstitv</a> team in
+        providing hockey fans NHL results each night and
         morning.
       </p>
-      <hr />
+    </section>
+    <section>
       <h2>Install:</h2>
-      <h3>with <a href="https://crates.io/">Rust</a></h3>
-      <pre><code>cargo install nhl-235</code></pre>
-      <pre><code>ln -s ~/.cargo/bin/nhl-235 /usr/local/bin/235</code></pre>
-      <h3>from Github</h3>
+      <h3>- with <a href="https://crates.io/">Rust</a></h3>
+      <pre><code>cargo install nhl-235
+// To run it with 235 instead of nhl-235:
+ln -s ~/.cargo/bin/nhl-235 /usr/local/bin/235</code></pre>
+      <h3>- from Github</h3>
       <p>
-        <a href="https://github.com/Hamatti/nhl-235/releases/latest"
-          >Download binaries from GitHub</a
-        >
+        <a href="https://github.com/Hamatti/nhl-235/releases/latest">
+          Download binaries from GitHub
+        </a>
       </p>
-      <hr />
-      <p></p>
-
+    </section>
+    <section>
       <h2>Usage:</h2>
+      <p><em>These examples use <code>235</code> as the command name. If you have just installed it without aliasing or
+          creating symbolic link as shown in install section, you need to call it with <code>nhl-235</code>.</em></p>
+      <h3 id="docs-default">Default</h3>
       <pre><code>235</code></pre>
-      <img style="margin-top: 1em; width: 100%" src="235.png" />
+      <div class="output-example">
+        <pre>
+<span class="token-prompt">$</span> 235
+<span class="token-teams">Washington      - Buffalo</span>          <span class="token-final-score">so 4-3</span>
+<span class="token-player">Backström      16 Staal          12</span>
+<span class="token-player">Dowd           24 Cozens         30</span>
+<span class="token-player">Vrana          33 Sheahan        33</span>
+<span class="token-shootout">Carlson        65</span>
 
-      <hr />
-      <h2>Source:</h2>
-      <p><a href="https://crates.io/crates/nhl-235">crates.io/nhl-235</a></p>
-      <p><a href="https://github.com/hamatti/nhl-235/">hamatti/nhl-235</a></p>
-      <hr />
-      <h2>Acknowledgements:</h2>
+<span class="token-teams">Pittsburgh      - NY Rangers</span>       1-0
+<span class="token-player">Crosby         14</span>
+        </pre>
+      </div>
+
+      <p>With default options, <span class="token-final-score">green score</span> means the game has ended and white
+        that it's still on-going. <span class="token-player">Teal</span> is regular goal and <span
+          class="token-shootout">purple</span> means overtime or shootout winner. The number after scorer's name is the
+        minute of the goal.</p>
+
+      <h3 id="docs-nocolors">--nocolors</h3>
+      <pre><code>235 --nocolors</code></pre>
+      <div class="output-example">
+        <pre>
+$ 235
+Washington      - Buffalo          so 4-3
+Backström      16 Staal          12
+Dowd           24 Cozens         30
+Vrana          33 Sheahan        33
+Carlson        65
+
+Pittsburgh      - NY Rangers       1-0
+Crosby         14
+            </pre>
+      </div>
+      <p>Running 235 with <code>--nocolors</code> disables printing the color codes to the terminal and everything is
+        default-colored for the terminal.</p>
+      <p>This also happens if printing into anything else than standard output, for example piping into a file or
+        another program.</p>
+
+      <h3 id="docs-highlight">--highlight</h3>
+      <p>You can highlight your favorite players by creating a <code>.235.config</code> file in your home directory.
+        Each line in the file must be a single last name to be highlighted.</p>
+      <p>Example <code>.235.config</code>:</p>
+      <pre><code>Vrana
+Crosby</code></pre>
+      <p>Once run with <code>--highlight</code> option, those players will be shown in yellow.</p>
+      <pre><code>235 --highlight</code></pre>
+      <div class="output-example">
+        <pre>
+<span class="token-prompt">$</span> 235
+<span class="token-teams">Washington      - Buffalo</span>          <span class="token-final-score">so 4-3</span>
+<span class="token-player">Backström      16 Staal          12</span>
+<span class="token-player">Dowd           24 Cozens         30</span>
+<span class="token-highlight">Vrana          33</span> <span class="token-player">Sheahan        33</span>
+<span class="token-shootout">Carlson        65</span>
+
+<span class="token-teams">Pittsburgh      - NY Rangers</span>       1-0
+<span class="token-highlight">Crosby         14</span>
+                    </pre>
+      </div>
+      <p>This makes it easier for you to see if your favorite players scored.</p>
+      <p><em>If <code>--nocolors</code> is enabled, <code>--highlight</code> does nothing.</em></p>
+
+      <h3 id="docs-version">--version</h3>
+
+      <pre><code>235 --version</code></pre>
+      <div class="output-example">
+        <pre><code>1.2.1</code></pre>
+      </div>
+
+      <p>Outputs the current version.</p>
+
+      <h3 id="docs-help">--help</h3>
+      <pre><code>235 --help</code></pre>
+      <div class="output-example">
+        <pre><code>nhl-235 1.2.1
+Display live or previous NHL match results on command line
+
+Homepage: https://hamatti.github.io/nhl-235/
+
+Open source under MIT license
+
+USAGE:
+    nhl-235 [FLAGS]
+
+FLAGS:
+    -h, --help
+            Prints help information
+
+        --highlight
+            Highlight players based on $HOME/.235.config file. 
+            If --nocolors is enabled, does nothing
+
+        --nocolors
+            Disable terminal colors
+
+        --version
+            Current version</code></pre>
+      </div>
+
+      <p>Prints help information about current version, description of the software and information about options.</p>
+
+    </section>
+
+    <section>
+      <h2>Source code</h2>
       <p>
-        This tool uses
-        <a href="https://github.com/peruukki/nhl-score-api"
-          >peruukki/nhl-score-api</a
-        >.
+        235 is published as an open source software with MIT license.
+      </p>
+      <p>You can find the source code from <a href="https://github.com/hamatti/nhl-235/">https://github.com/hamatti/nhl-235/</a>.</p>
+
+      <p>
+        Feel free to open issues in GitHub if you find bugs or have feature ideas.
+      </p>
+    </section>
+    <section>
+      <h2>Acknowledgements</h2>
+      <p>
+        This software uses <a href="https://github.com/peruukki/nhl-score-api">peruukki/nhl-score-api</a> for its data.
       </p>
       <p>
         Development of 235 has been a grateful recipient of the
         <a href="https://spiceprogram.org">
-          Futurice Open Source sponsorship program</a
-        >.
+          Futurice Open Source sponsorship program</a> in 2021-2022.
       </p>
-      <p>Built with ❤️ by <a href="https://hamatti.org">Juhis</a></p>
-    </main>
-  </body>
+    </section>
+  </main>
+  <footer>
+    <p>Built with ❤️ by <a href="https://hamatti.org">Juhis</a></p>
+  </footer>
+</body>
+
 </html>
