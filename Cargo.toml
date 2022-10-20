@@ -1,6 +1,6 @@
 [package]
 name = "nhl-235"
-version = "1.2.1"
+version = "1.2.2"
 authors = ["Juha-Matti Santala <juhamattisantala@gmail.com>"]
 edition = "2018"
 license = "MIT"
