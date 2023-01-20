@@ -6,6 +6,10 @@ NHL results on your command-line with a familiar feel.
 
 For decades, number 235 has been an important part of the morning routine of Finnish hockey fans. YLE's (Finnish Broadcasting Company) teletext page 235 displays on-going or latest results for NHL games. Its cultural importance is so big that I wanted to pay homage to it with this project.
 
+## Status of the project
+
+I consider 235 as pretty much feature-complete at this point. I'll fix bugs if I run into them and at some point I'll take a look at learning how to build it for other platforms than just Mac. Other than that, the project is not dead or abandoned even though it won't receive updates – it's just, you know, working.
+
 ## Install
 
 ### Cargo
