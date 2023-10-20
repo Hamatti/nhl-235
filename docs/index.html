@@ -51,6 +51,13 @@
         </p>
       </section>
       <section>
+        <h2>Release notes</h2>
+
+        <ul class="release-notes">
+          <li><a href="release-notes/1.3.0">version 1.3.0</a></li>
+        </ul>
+      </section>
+      <section>
         <h2>Install:</h2>
         <h3>- with <a href="https://crates.io/">Rust</a></h3>
         <pre><code>cargo install nhl-235
@@ -158,6 +165,57 @@ Crosby</code></pre>
           <em
             >If <code>--nocolors</code> is enabled,
             <code>--highlight</code> does nothing.</em
+          >
+        </p>
+
+        <h3 id="docs-stats">--stats</h3>
+        <p>
+          <em
+            >from version 1.3.0 onwards, see
+            <a href="release-notes/1.3.0.html">release notes</a></em
+          >.
+        </p>
+        <p>
+          You can gain more stats of favorite players by creating a
+          <code>.235.config</code> file in your home directory. Each line in the
+          file must be a single last name to be shown.
+        </p>
+        <p>Example <code>.235.config</code>:</p>
+        <pre><code>Vrana
+Crosby</code></pre>
+        <p>
+          Once run with <code>--stats</code> option, those players' stats will
+          be shown below the game summary if they gain any goals or assists.
+        </p>
+        <pre><code>235 --stats</code></pre>
+        <div class="output-example">
+          <pre>
+<span class="token-prompt">$</span> 235 --highlight
+<span class="token-teams">Washington      - Buffalo</span>          <span class="token-final-score">so 4-3</span>
+<span class="token-player">Backström      16 Staal          12</span>
+<span class="token-player">Dowd           24 Cozens         30</span>
+<span class="token-player">Vrana          33</span> <span class="token-player">Sheahan        33</span>
+<span class="token-shootout">Carlson        65</span>
+
+<span class="token-player">(Vrana 1+1)</span>
+
+
+<span class="token-teams">Pittsburgh      - NY Rangers</span>       1-0
+<span class="token-player">Crosby         14</span>
+
+<span class="token-player">(Crosby 1+0)</span>
+                    </pre>
+        </div>
+        <p>
+          <em
+            >Can be used with <code>--highlight</code> in which case the stats
+            line will be highlighted too.</em
+          >
+        </p>
+        <p>
+          <em
+            >If no players are defined in <code>$HOME/.235.config</code>, this
+            option does nothing.</em
           >
         </p>
 
