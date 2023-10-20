@@ -426,7 +426,7 @@ fn print_game(
     println!();
 
     if show_stats {
-        print_stats(&home_scores, &away_scores, &highlights, show_highlights);
+        print_stats(&game.goals, &highlights, show_highlights);
     }
 
     match &game.playoff_series {
@@ -537,19 +537,10 @@ fn count_stats(goal: &Goal, stats: &mut HashMap<String, Stat>, highlights: &[Str
     })
 }
 
-fn print_stats(
-    home_scores: &Vec<&Goal>,
-    away_scores: &Vec<&Goal>,
-    highlights: &[String],
-    show_highlights: bool,
-) {
+fn print_stats(goals: &Vec<Goal>, highlights: &[String], show_highlights: bool) {
     let mut stats: HashMap<String, Stat> = HashMap::new();
 
-    home_scores.iter().for_each(|&goal| {
-        count_stats(&goal, &mut stats, &highlights);
-    });
-
-    away_scores.iter().for_each(|&goal| {
+    goals.iter().for_each(|goal| {
         count_stats(&goal, &mut stats, &highlights);
     });
 
