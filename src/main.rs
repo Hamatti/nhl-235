@@ -522,19 +522,17 @@ fn print_stats(
     let mut stats: HashMap<String, Stat> = HashMap::new();
     home_scores.iter().for_each(|&goal| {
         if highlights.contains(&goal.scorer) {
-            let current_score = match stats.get(&goal.scorer) {
-                Some(stat) => stat.goals,
-                None => 0,
-            };
-
-            let current_assists = match stats.get(&goal.scorer) {
-                Some(stat) => stat.assists,
-                None => 0,
+            let current_stats = match stats.get(&goal.scorer) {
+                Some(stat) => stat,
+                None => &Stat {
+                    goals: 0,
+                    assists: 0,
+                },
             };
 
             let new_stat: Stat = Stat {
-                goals: current_score + 1,
-                assists: current_assists,
+                goals: current_stats.goals + 1,
+                assists: current_stats.assists,
             };
 
             stats.insert(String::from(&goal.scorer), new_stat);
@@ -542,19 +540,17 @@ fn print_stats(
 
         goal.assists.iter().for_each(|assist| {
             if highlights.contains(&assist) {
-                let current_goals = match stats.get(assist) {
-                    Some(stat) => stat.goals,
-                    None => 0,
-                };
-
-                let current_assists = match stats.get(assist) {
-                    Some(stat) => stat.assists,
-                    None => 0,
+                let current_stats = match stats.get(&goal.scorer) {
+                    Some(stat) => stat,
+                    None => &Stat {
+                        goals: 0,
+                        assists: 0,
+                    },
                 };
 
                 let new_stat: Stat = Stat {
-                    goals: current_goals,
-                    assists: current_assists + 1,
+                    goals: current_stats.goals,
+                    assists: current_stats.assists + 1,
                 };
 
                 stats.insert(String::from(assist), new_stat);
@@ -564,19 +560,17 @@ fn print_stats(
 
     away_scores.iter().for_each(|&goal| {
         if highlights.contains(&goal.scorer) {
-            let current_goals = match stats.get(&goal.scorer) {
-                Some(stat) => stat.goals,
-                None => 0,
-            };
-
-            let current_assists = match stats.get(&goal.scorer) {
-                Some(stat) => stat.assists,
-                None => 0,
+            let current_stats = match stats.get(&goal.scorer) {
+                Some(stat) => stat,
+                None => &Stat {
+                    goals: 0,
+                    assists: 0,
+                },
             };
 
             let new_stat: Stat = Stat {
-                goals: current_goals + 1,
-                assists: current_assists,
+                goals: current_stats.goals + 1,
+                assists: current_stats.assists,
             };
 
             stats.insert(String::from(&goal.scorer), new_stat);
@@ -584,19 +578,17 @@ fn print_stats(
 
         goal.assists.iter().for_each(|assist| {
             if highlights.contains(&assist) {
-                let current_goals = match stats.get(assist) {
-                    Some(stat) => stat.goals,
-                    None => 0,
-                };
-
-                let current_assists = match stats.get(assist) {
-                    Some(stat) => stat.assists,
-                    None => 0,
+                let current_stats = match stats.get(&goal.scorer) {
+                    Some(stat) => stat,
+                    None => &Stat {
+                        goals: 0,
+                        assists: 0,
+                    },
                 };
 
                 let new_stat: Stat = Stat {
-                    goals: current_goals,
-                    assists: current_assists + 1,
+                    goals: current_stats.goals,
+                    assists: current_stats.assists + 1,
                 };
 
                 stats.insert(String::from(assist), new_stat);
@@ -608,18 +600,17 @@ fn print_stats(
         return;
     }
 
-    let mut message = String::from("(");
+    let mut stats_messages: Vec<String> = Vec::new();
     for (name, stats) in stats.iter() {
-        message.push_str(name);
-        message.push_str(" ");
-        message.push_str(&stats.goals.to_string());
-        message.push_str("+");
-        message.push_str(&stats.assists.to_string());
-        message.push_str(", ");
+        let sub_message = format!(
+            "{} {}+{}",
+            name,
+            &stats.goals.to_string(),
+            &stats.assists.to_string()
+        );
+        stats_messages.push(sub_message);
     }
-    let len = message.len();
-    message = String::from(&message[..len - 2]);
-    message.push_str(")");
+    let message: String = format!("({})", stats_messages.join(", "));
 
     if show_highlights {
         yellow_ln!("{}", message);
