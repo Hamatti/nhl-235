@@ -513,6 +513,40 @@ fn print_away_goal(away: &Goal, use_colors: bool, highlights: &[String], show_hi
     }
 }
 
+fn count_stats(goal: &Goal, stats: &mut HashMap<String, Stat>, highlights: &[String]) {
+    if highlights.contains(&goal.scorer) {
+        let new_stat = match stats.get(&goal.scorer) {
+            Some(stat) => Stat {
+                goals: stat.goals + 1,
+                assists: stat.assists,
+            },
+            None => Stat {
+                goals: 1,
+                assists: 0,
+            },
+        };
+
+        stats.insert(String::from(&goal.scorer), new_stat);
+    }
+
+    goal.assists.iter().for_each(|assist| {
+        if highlights.contains(&assist) {
+            let new_stat = match stats.get(&goal.scorer) {
+                Some(stat) => Stat {
+                    goals: stat.goals,
+                    assists: stat.assists + 1,
+                },
+                None => Stat {
+                    goals: 0,
+                    assists: 1,
+                },
+            };
+
+            stats.insert(String::from(assist), new_stat);
+        }
+    })
+}
+
 fn print_stats(
     home_scores: &Vec<&Goal>,
     away_scores: &Vec<&Goal>,
@@ -520,80 +554,13 @@ fn print_stats(
     show_highlights: bool,
 ) {
     let mut stats: HashMap<String, Stat> = HashMap::new();
+
     home_scores.iter().for_each(|&goal| {
-        if highlights.contains(&goal.scorer) {
-            let current_stats = match stats.get(&goal.scorer) {
-                Some(stat) => stat,
-                None => &Stat {
-                    goals: 0,
-                    assists: 0,
-                },
-            };
-
-            let new_stat: Stat = Stat {
-                goals: current_stats.goals + 1,
-                assists: current_stats.assists,
-            };
-
-            stats.insert(String::from(&goal.scorer), new_stat);
-        }
-
-        goal.assists.iter().for_each(|assist| {
-            if highlights.contains(&assist) {
-                let current_stats = match stats.get(&goal.scorer) {
-                    Some(stat) => stat,
-                    None => &Stat {
-                        goals: 0,
-                        assists: 0,
-                    },
-                };
-
-                let new_stat: Stat = Stat {
-                    goals: current_stats.goals,
-                    assists: current_stats.assists + 1,
-                };
-
-                stats.insert(String::from(assist), new_stat);
-            }
-        })
+        count_stats(&goal, &mut stats, &highlights);
     });
 
     away_scores.iter().for_each(|&goal| {
-        if highlights.contains(&goal.scorer) {
-            let current_stats = match stats.get(&goal.scorer) {
-                Some(stat) => stat,
-                None => &Stat {
-                    goals: 0,
-                    assists: 0,
-                },
-            };
-
-            let new_stat: Stat = Stat {
-                goals: current_stats.goals + 1,
-                assists: current_stats.assists,
-            };
-
-            stats.insert(String::from(&goal.scorer), new_stat);
-        }
-
-        goal.assists.iter().for_each(|assist| {
-            if highlights.contains(&assist) {
-                let current_stats = match stats.get(&goal.scorer) {
-                    Some(stat) => stat,
-                    None => &Stat {
-                        goals: 0,
-                        assists: 0,
-                    },
-                };
-
-                let new_stat: Stat = Stat {
-                    goals: current_stats.goals,
-                    assists: current_stats.assists + 1,
-                };
-
-                stats.insert(String::from(assist), new_stat);
-            }
-        })
+        count_stats(&goal, &mut stats, &highlights);
     });
 
     if stats.is_empty() {
