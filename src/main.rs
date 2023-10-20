@@ -29,9 +29,16 @@ use api_types::{APIResponse, GameResponse, GoalResponse};
 #[derive(Debug)]
 struct Goal {
     scorer: String,
+    assists: Vec<String>,
     minute: u64,
     special: bool,
     team: String,
+}
+
+#[derive(Debug)]
+struct Stat {
+    goals: u64,
+    assists: u64,
 }
 
 #[derive(Debug)]
@@ -59,8 +66,15 @@ struct Cli {
     #[structopt(help = "Disable terminal colors")]
     nocolors: bool,
     #[structopt(long)]
-    #[structopt(help = "Highlight players based on $HOME/.235.config file. If --nocolors is enabled, does nothing")]
+    #[structopt(
+        help = "Highlight players based on $HOME/.235.config file. If --nocolors is enabled, does nothing"
+    )]
     highlight: bool,
+    #[structopt(long)]
+    #[structopt(
+        help = "Display stats (goals + assists) for players defined in $HOME/.235.config file."
+    )]
+    stats: bool,
 }
 
 fn main() {
@@ -68,25 +82,29 @@ fn main() {
     // Using an inverse here because default is colors enabled
     // and I want to keep the API easier to read down the line,
     // hence colors need to be enabled rather than disabled
-    let use_colors = !args.nocolors;
     if args.version {
         println!("{}", env!("CARGO_PKG_VERSION"));
-    } else {
-        let highlights = if args.highlight {
-            read_highlight_config().unwrap_or_default()
-        } else {
-            Vec::new()
-        };
-        match fetch_games() {
-            Ok(scores) => {
-                let parsed_games = parse_games(scores);
-                print_games(parsed_games, use_colors, &highlights);
-            }
-            Err(err) => {
-                handle_request_error(err);
-            }
-        };
+        std::process::exit(0);
     }
+
+    let use_colors = !args.nocolors;
+    let highlights = if args.highlight {
+        read_highlight_config().unwrap_or_default()
+    } else {
+        Vec::new()
+    };
+
+    let show_stats = args.stats;
+
+    match fetch_games() {
+        Ok(scores) => {
+            let parsed_games = parse_games(scores);
+            print_games(parsed_games, use_colors, &highlights, show_stats);
+        }
+        Err(err) => {
+            handle_request_error(err);
+        }
+    };
 }
 
 fn read_highlight_config() -> Result<Vec<String>, StdError> {
@@ -186,12 +204,17 @@ fn parse_games(scores: APIResponse) -> Vec<Option<Game>> {
 }
 
 /// Handler function to print multiple Games
-fn print_games(games: Vec<Option<Game>>, use_colors: bool, highlights: &[String]) {
+fn print_games(
+    games: Vec<Option<Game>>,
+    use_colors: bool,
+    highlights: &[String],
+    show_stats: bool,
+) {
     match games.len() {
         0 => println!("No games today."),
         _ => {
             games.into_iter().for_each(|game| match game {
-                Some(game) => print_game(&game, use_colors, &highlights),
+                Some(game) => print_game(&game, use_colors, &highlights, show_stats),
                 None => (),
             });
         }
@@ -262,9 +285,17 @@ fn parse_game(game_json: &GameResponse) -> Option<Game> {
             };
 
             let scorer = extract_scorer_name(&goal.scorer.player);
+            let assists = &goal
+                .assists
+                .as_ref()
+                .unwrap_or(&Vec::new())
+                .iter()
+                .map(|assist| extract_scorer_name(&assist.player))
+                .collect::<Vec<String>>();
 
             return Goal {
                 scorer: scorer,
+                assists: assists.to_vec(),
                 minute: minute,
                 team: goal.team.replace("\"", ""),
                 special: is_special(goal),
@@ -299,7 +330,7 @@ fn extract_scorer_name(name: &str) -> String {
     name.join(" ")
 }
 
-fn print_game(game: &Game, use_colors: bool, highlights: &[String]) {
+fn print_game(game: &Game, use_colors: bool, highlights: &[String], show_stats: bool) {
     let home_scores: Vec<&Goal> = game
         .goals
         .iter()
@@ -359,7 +390,7 @@ fn print_game(game: &Game, use_colors: bool, highlights: &[String]) {
     }
 
     // Print scores
-    let score_pairs = home_scores.into_iter().zip_longest(away_scores.into_iter());
+    let score_pairs = home_scores.iter().zip_longest(away_scores.iter());
     for pair in score_pairs {
         match pair {
             Both(home, away) => print_both_goals(home, away, use_colors, highlights),
@@ -379,6 +410,10 @@ fn print_game(game: &Game, use_colors: bool, highlights: &[String]) {
         }
     }
     println!();
+
+    if show_stats {
+        print_stats(&home_scores, &away_scores, &highlights);
+    }
 
     match &game.playoff_series {
         Some(playoff_series) => {
@@ -456,6 +491,113 @@ fn print_away_goal(away: &Goal, use_colors: bool, highlights: &[String]) {
     } else {
         println!("{}", message);
     }
+}
+
+fn print_stats(home_scores: &Vec<&Goal>, away_scores: &Vec<&Goal>, highlights: &[String]) {
+    let mut stats: HashMap<String, Stat> = HashMap::new();
+    home_scores.iter().for_each(|&goal| {
+        if highlights.contains(&goal.scorer) {
+            let current_score = match stats.get(&goal.scorer) {
+                Some(stat) => stat.goals,
+                None => 0,
+            };
+
+            let current_assists = match stats.get(&goal.scorer) {
+                Some(stat) => stat.assists,
+                None => 0,
+            };
+
+            let new_stat: Stat = Stat {
+                goals: current_score + 1,
+                assists: current_assists,
+            };
+
+            stats.insert(String::from(&goal.scorer), new_stat);
+        }
+
+        goal.assists.iter().for_each(|assist| {
+            if highlights.contains(&assist) {
+                let current_goals = match stats.get(assist) {
+                    Some(stat) => stat.goals,
+                    None => 0,
+                };
+
+                let current_assists = match stats.get(assist) {
+                    Some(stat) => stat.assists,
+                    None => 0,
+                };
+
+                let new_stat: Stat = Stat {
+                    goals: current_goals,
+                    assists: current_assists + 1,
+                };
+
+                stats.insert(String::from(assist), new_stat);
+            }
+        })
+    });
+
+    away_scores.iter().for_each(|&goal| {
+        if highlights.contains(&goal.scorer) {
+            let current_goals = match stats.get(&goal.scorer) {
+                Some(stat) => stat.goals,
+                None => 0,
+            };
+
+            let current_assists = match stats.get(&goal.scorer) {
+                Some(stat) => stat.assists,
+                None => 0,
+            };
+
+            let new_stat: Stat = Stat {
+                goals: current_goals + 1,
+                assists: current_assists,
+            };
+
+            stats.insert(String::from(&goal.scorer), new_stat);
+        }
+
+        goal.assists.iter().for_each(|assist| {
+            if highlights.contains(&assist) {
+                let current_goals = match stats.get(assist) {
+                    Some(stat) => stat.goals,
+                    None => 0,
+                };
+
+                let current_assists = match stats.get(assist) {
+                    Some(stat) => stat.assists,
+                    None => 0,
+                };
+
+                let new_stat: Stat = Stat {
+                    goals: current_goals,
+                    assists: current_assists + 1,
+                };
+
+                stats.insert(String::from(assist), new_stat);
+            }
+        })
+    });
+
+    if stats.is_empty() {
+        return;
+    }
+
+    let mut message = String::from("(");
+    for (name, stats) in stats.iter() {
+        message.push_str(name);
+        message.push_str(" ");
+        message.push_str(&stats.goals.to_string());
+        message.push_str("+");
+        message.push_str(&stats.assists.to_string());
+        message.push_str(", ");
+    }
+    let len = message.len();
+    message = String::from(&message[..len - 2]);
+    message.push_str(")");
+
+    yellow_ln!("{}", message);
+    println!();
 }
 
 #[cfg(test)]
