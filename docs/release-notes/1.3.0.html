@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Release notes for version 1.3.0 of nhl-235</title>
+
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap"
+      rel="stylesheet"
+    />
+
+    <meta property="og:title" content="235 - Release notes for 1.3.0" />
+    <meta
+      property="og:url"
+      content="https://hamatti.github.io/nhl-235/release-notes/1.3.0"
+    />
+    <meta
+      property="og:description"
+      content="What's new in version 1.3.0 of nhl-235?"
+    />
+    <meta
+      property="og:image"
+      content="https://hamatti.github.io/nhl-235-banner.png"
+    />
+
+    <link rel="stylesheet" href="../main.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Release notes for version 1.3.0</h1>
+
+      <section>
+        <h2>Goals + assists for followed players</h2>
+
+        <p>
+          Starting with version 1.3.0, users can now see more stats from the
+          players they follow.
+        </p>
+        <p>
+          You can follow players by adding their last name to file
+          <code>$HOME/.235.config</code>. Previously, this allowed users to
+          highlight them in yellow color with the flag <code>--highlight</code>.
+        </p>
+        <h3>Stats with <code>--highlight</code></h3>
+        <p>
+          Now, you can use <code>--stats</code> flag to show the goals and
+          assists of those players underneath the full game summary.
+        </p>
+
+        <div class="output-example">
+          <pre>
+            <span class="token-prompt">$</span> 235 --highlight --stats
+            <span class="token-teams">Washington      - Buffalo</span>          <span class="token-final-score">so 4-3</span>
+            <span class="token-player">Backström      16 Staal          12</span>
+            <span class="token-player">Dowd           24</span> <span class="token-highlight">Cozens         30</span>
+            <span class="token-highlight">Vrana          33</span> <span class="token-player">Sheahan        33</span>
+            <span class="token-shootout">Carlson        65</span>
+
+            <span class="token-stats">(Vrana 1+2, Cozens 1+0)</span>
+
+            <span class="token-teams">Pittsburgh      - NY Rangers</span>       1-0
+            <span class="token-highlight">Crosby         14</span>
+
+            <span class="token-stats">(Crosby 1+0)</span>
+        </pre>
+        </div>
+
+        <h3>Stats without <code>--highlight</code></h3>
+        <p>
+          You can use <code>--stats</code> also without
+          <code>--highlight</code> in which case you'll see the stats but
+          without yellow highlight.
+        </p>
+        <div class="output-example">
+          <pre>
+            <span class="token-prompt">$</span> 235 --stats
+            <span class="token-teams">Washington      - Buffalo</span>          <span class="token-final-score">so 4-3</span>
+            <span class="token-player">Backström      16 Staal          12</span>
+            <span class="token-player">Dowd           24</span> <span class="token-player">Cozens         30</span>
+            <span class="token-player">Vrana          33</span> <span class="token-player">Sheahan        33</span>
+            <span class="token-shootout">Carlson        65</span>
+
+            <span class="token-player">(Vrana 1+2, Cozens 1+0)</span>
+
+            <span class="token-teams">Pittsburgh      - NY Rangers</span>       1-0
+            <span class="token-player">Crosby         14</span>
+
+            <span class="token-player">(Crosby 1+0)</span>
+        </pre>
+        </div>
+
+        <h3>FAQ</h3>
+        <h4>What if no <code>$HOME/.235.config</code> is not defined?</h4>
+        <p>
+          If you haven't defined any entries in the highlights file,
+          <code>--stats</code> will be ignored.
+        </p>
+        <h4>Will players with 0+0 stats be shown?</h4>
+        <p>
+          No. It adds too much clutter and makes it harder to find stats that
+          matter.
+        </p>
+
+        <h3>Update instructions</h3>
+        <p>
+          If you have installed 235 through
+          <a href="https://crates.io/crates/nhl-235">Cargo</a>, you can update
+          your package to 1.3.0 with <code>cargo update nhl-235</code>.
+        </p>
+        <p>
+          If you have downloaded a binary from
+          <a href="https://github.com/Hamatti/nhl-235">GitHub</a>, you can
+          download
+          <a href="https://github.com/Hamatti/nhl-235/releases/tag/v1.3.0"
+            >1.3.0</a
+          >
+          binary there and replace your old file.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

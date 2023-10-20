@@ -1,89 +1,90 @@
 body {
-    background: #1e1d1d;
-    color: white;
-    font-size: 20px;
+  background: #1e1d1d;
+  color: white;
+  font-size: 20px;
 }
 
 header img {
-    margin: auto;
-    max-width: min(800px, 100%);
-    display: block;
+  margin: auto;
+  max-width: min(800px, 100%);
+  display: block;
 }
 
 header,
 main,
 footer {
-    max-width: 800px;
-    margin: auto;
-    display: block;
+  max-width: 800px;
+  margin: auto;
+  display: block;
 }
 
 a,
 a:visited,
 a:hover {
-    color: #52DF45;
+  color: #52df45;
 }
 
 section {
-    border-bottom: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
 }
 
 h1 {
-    text-align: center;
-    font-size: 2em;
-    margin-bottom: -0.5em;
+  text-align: center;
+  font-size: 2em;
+  margin-bottom: -0.5em;
 }
 
 .tagline {
-    font-size: 0.8em;
-    text-align: center;
+  font-size: 0.8em;
+  text-align: center;
 }
 
 pre {
-    line-height: 1.5;
-    background: #424242;
-    counter-reset: linenumber;
-    overflow: auto;
-    font-size: min(3vw, 20px);
-    border: 1px solid #fff;
-    padding: 0.5em;
-    border-radius: 10px;
+  line-height: 1.5;
+  background: #424242;
+  counter-reset: linenumber;
+  overflow: auto;
+  font-size: min(3vw, 20px);
+  border: 1px solid #fff;
+  padding: 0.5em;
+  border-radius: 10px;
 }
 
 @media screen and (max-width: 800px) {
-    body {
-        font-size: 18px;
-        margin: 1em;
-    }
+  body {
+    font-size: 18px;
+    margin: 1em;
+  }
 }
 
 .output-example pre {
-    background-color: black;
+  background-color: black;
 }
 
 .token-final-score {
-    color: greenyellow;
+  color: greenyellow;
 }
 
 .token-player {
-    color: rgb(15, 221, 221);
+  color: rgb(15, 221, 221);
 }
 
 .token-shootout {
-    color: rgb(206, 42, 206);
+  color: rgb(206, 42, 206);
 }
 
 p code {
-    font-size: 0.8em;
-    background: #424242;
-    padding: 0.2em;
-    border-radius: 10px;
+  font-size: 0.8em;
+  background: #424242;
+  padding: 0.2em;
+  border-radius: 10px;
 }
 
-.token-highlight {
-    color: yellow;
+.token-highlight,
+.token-stats {
+  color: yellow;
 }
 
 footer {
-    text-align: center;
+  text-align: center;
 }
