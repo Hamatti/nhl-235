@@ -523,11 +523,11 @@ fn count_stats(goals: &Vec<Goal>, highlights: &[String]) -> HashMap<String, Stat
     return stats;
 }
 
-fn print_stats(goals: &Vec<Goal>, highlights: &[String], options: &Options) {
+fn craft_stats_message(goals: &Vec<Goal>, highlights: &[String]) -> Option<String> {
     let stats: HashMap<String, Stat> = count_stats(&goals, &highlights);
 
     if stats.is_empty() {
-        return;
+        return None;
     }
 
     let mut stats_messages: Vec<String> = Vec::new();
@@ -540,16 +540,25 @@ fn print_stats(goals: &Vec<Goal>, highlights: &[String], options: &Options) {
         );
         stats_messages.push(sub_message);
     }
-    let message: String = format!("({})", stats_messages.join(", "));
+    return Some(format!("({})", stats_messages.join(", ")));
+}
 
-    if options.show_highlights {
-        yellow_ln!("{}", message);
-    } else if options.use_colors {
-        white_ln!("{}", message);
-    } else {
-        println!("{}", message);
+fn print_stats(goals: &Vec<Goal>, highlights: &[String], options: &Options) {
+    let message: Option<String> = craft_stats_message(&goals, &highlights);
+
+    match message {
+        Some(message) => {
+            if options.show_highlights {
+                yellow_ln!("{}", message);
+            } else if options.use_colors {
+                white_ln!("{}", message);
+            } else {
+                println!("{}", message);
+            }
+            println!();
+        }
+        None => (),
     }
-    println!();
 }
 
 #[cfg(test)]
@@ -854,5 +863,139 @@ mod tests {
             extract_scorer_name("James van Riemsdyk"),
             String::from("van Riemsdyk")
         );
+    }
+
+    #[test]
+    fn it_crafts_no_message_if_no_highlighted_players_gain_stats() {
+        let highlights: Vec<String> = vec![String::from("Crosby")];
+        let goal: Goal = Goal {
+            scorer: String::from("Malkin"),
+            assists: vec![String::from("Letang"), String::from("Karlsson")],
+            minute: 21,
+            special: false,
+            team: String::from("Pittsburg"),
+        };
+
+        let expected: Option<String> = None;
+        let actual: Option<String> = craft_stats_message(&vec![goal], &highlights);
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn it_crafts_good_message_if_player_scored() {
+        let highlights: Vec<String> = vec![String::from("Crosby")];
+        let goal: Goal = Goal {
+            scorer: String::from("Crosby"),
+            assists: vec![String::from("Letang"), String::from("Karlsson")],
+            minute: 21,
+            special: false,
+            team: String::from("Pittsburg"),
+        };
+
+        let expected: Option<String> = Some(String::from("(Crosby 1+0)"));
+        let actual: Option<String> = craft_stats_message(&vec![goal], &highlights);
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn it_crafts_good_message_if_player_gained_assist() {
+        let highlights: Vec<String> = vec![String::from("Crosby")];
+        let goal: Goal = Goal {
+            scorer: String::from("Malkin"),
+            assists: vec![String::from("Crosby"), String::from("Karlsson")],
+            minute: 21,
+            special: false,
+            team: String::from("Pittsburg"),
+        };
+
+        let expected: Option<String> = Some(String::from("(Crosby 0+1)"));
+        let actual: Option<String> = craft_stats_message(&vec![goal], &highlights);
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn it_crafts_good_message_if_player_gained_both_goal_and_assist() {
+        let highlights: Vec<String> = vec![String::from("Crosby")];
+        let goal: Goal = Goal {
+            scorer: String::from("Malkin"),
+            assists: vec![String::from("Crosby"), String::from("Karlsson")],
+            minute: 21,
+            special: false,
+            team: String::from("Pittsburg"),
+        };
+
+        let goal2: Goal = Goal {
+            scorer: String::from("Crosby"),
+            assists: vec![String::from("Rust")],
+            minute: 21,
+            special: false,
+            team: String::from("Pittsburg"),
+        };
+
+        let expected: Option<String> = Some(String::from("(Crosby 1+1)"));
+        let actual: Option<String> = craft_stats_message(&vec![goal, goal2], &highlights);
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn it_crafts_good_message_if_player_gained_two_assists() {
+        let highlights: Vec<String> = vec![String::from("Crosby")];
+        let goal: Goal = Goal {
+            scorer: String::from("Malkin"),
+            assists: vec![String::from("Crosby"), String::from("Karlsson")],
+            minute: 21,
+            special: false,
+            team: String::from("Pittsburg"),
+        };
+
+        let goal2: Goal = Goal {
+            scorer: String::from("Malkin"),
+            assists: vec![String::from("Rust"), String::from("Crosby")],
+            minute: 21,
+            special: false,
+            team: String::from("Pittsburg"),
+        };
+
+        let expected: Option<String> = Some(String::from("(Crosby 0+2)"));
+        let actual: Option<String> = craft_stats_message(&vec![goal, goal2], &highlights);
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn it_crafts_good_message_if_multiple_players_gain_points() {
+        let highlights: Vec<String> = vec![String::from("Crosby"), String::from("Malkin")];
+        let goal: Goal = Goal {
+            scorer: String::from("Malkin"),
+            assists: vec![String::from("Crosby"), String::from("Karlsson")],
+            minute: 21,
+            special: false,
+            team: String::from("Pittsburg"),
+        };
+
+        let goal2: Goal = Goal {
+            scorer: String::from("Crosby"),
+            assists: vec![String::from("Rust"), String::from("Malkin")],
+            minute: 21,
+            special: false,
+            team: String::from("Pittsburg"),
+        };
+
+        let goal3: Goal = Goal {
+            scorer: String::from("Rust"),
+            assists: vec![String::from("Letang"), String::from("Malkin")],
+            minute: 21,
+            special: false,
+            team: String::from("Pittsburg"),
+        };
+
+        let expected: Option<String> = Some(String::from("(Malkin 1+2, Crosby 1+1)"));
+        let actual: Option<String> = craft_stats_message(&vec![goal, goal2, goal3], &highlights);
+
+        assert_eq!(actual, expected);
     }
 }
