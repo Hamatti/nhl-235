@@ -86,9 +86,6 @@ struct Cli {
 
 fn main() {
     let args = Cli::from_args();
-    // Using an inverse here because default is colors enabled
-    // and I want to keep the API easier to read down the line,
-    // hence colors need to be enabled rather than disabled
     if args.version {
         println!("{}", env!("CARGO_PKG_VERSION"));
         std::process::exit(0);
@@ -97,6 +94,9 @@ fn main() {
     let highlights = read_highlight_config().unwrap_or_default();
 
     let options: Options = Options {
+        // Using an inverse here because default is colors enabled
+        // and I want to keep the API easier to read down the line,
+        // hence colors need to be enabled rather than disabled
         use_colors: !args.nocolors,
         show_stats: args.stats,
         show_highlights: args.highlight,
