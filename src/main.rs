@@ -494,36 +494,37 @@ fn print_away_goal(away: &Goal, highlights: &[String], options: &Options) {
     }
 }
 
-fn count_stats(goal: &Goal, stats: &mut HashMap<String, Stat>, highlights: &[String]) {
-    if highlights.contains(&goal.scorer) {
-        stats
-            .entry(String::from(&goal.scorer))
-            .and_modify(|stat| stat.goals += 1)
-            .or_insert(Stat {
-                goals: 1,
-                assists: 0,
-            });
-    }
-
-    goal.assists.iter().for_each(|assist| {
-        if highlights.contains(&assist) {
-            stats
-                .entry(String::from(assist))
-                .and_modify(|stat| stat.assists += 1)
-                .or_insert(Stat {
-                    goals: 0,
-                    assists: 1,
-                });
-        }
-    })
-}
-
-fn print_stats(goals: &Vec<Goal>, highlights: &[String], options: &Options) {
+fn count_stats(goals: &Vec<Goal>, highlights: &[String]) -> HashMap<String, Stat> {
     let mut stats: HashMap<String, Stat> = HashMap::new();
 
     goals.iter().for_each(|goal| {
-        count_stats(&goal, &mut stats, &highlights);
+        if highlights.contains(&goal.scorer) {
+            stats
+                .entry(String::from(&goal.scorer))
+                .and_modify(|stat| stat.goals += 1)
+                .or_insert(Stat {
+                    goals: 1,
+                    assists: 0,
+                });
+        }
+        goal.assists.iter().for_each(|assist| {
+            if highlights.contains(&assist) {
+                stats
+                    .entry(String::from(assist))
+                    .and_modify(|stat| stat.assists += 1)
+                    .or_insert(Stat {
+                        goals: 0,
+                        assists: 1,
+                    });
+            }
+        })
     });
+
+    return stats;
+}
+
+fn print_stats(goals: &Vec<Goal>, highlights: &[String], options: &Options) {
+    let stats: HashMap<String, Stat> = count_stats(&goals, &highlights);
 
     if stats.is_empty() {
         return;
