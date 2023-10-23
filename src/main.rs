@@ -412,7 +412,7 @@ fn print_game(game: &Game, highlights: &[String], options: &Options) {
     }
     println!();
 
-    if options.show_stats {
+    if options.show_stats && !highlights.is_empty() {
         print_stats(&game.goals, &highlights, &options);
     }
 
