@@ -529,9 +529,14 @@ fn count_stats<'a>(
 }
 
 fn has_last_name_namesake(player: &Player, stats: &HashMap<&Player, Stat>) -> bool {
-    for key in stats.keys() {
-        if key.last_name == player.last_name && key.team != player.team {
+    for other in stats.keys() {
+        if other.last_name == player.last_name && other.team != player.team {
             return true;
+        }
+        if other.last_name == player.last_name && other.team == player.team {
+            if other.first_name != player.first_name {
+                return true;
+            }
         }
     }
     false
@@ -1173,7 +1178,7 @@ mod tests {
     }
 
     #[test]
-    fn it_crafts_good_message_if_different_players_with_same_last_name() {
+    fn it_crafts_good_message_if_different_players_from_different_teams_with_same_last_name() {
         let highlights: Vec<String> = vec![String::from("Hughes")];
         let goal: Goal = Goal {
             scorer: Player {
@@ -1197,6 +1202,41 @@ mod tests {
             minute: 23,
             special: false,
             team: String::from("Vancouver"),
+        };
+
+        let expected: String = String::from("Q. Hughes 1+0");
+        let expected2: String = String::from("J. Hughes 1+0");
+        let actual: Option<String> = craft_stats_message(&vec![goal, goal2], &highlights);
+
+        assert_eq!(actual.as_ref().unwrap().contains(&expected), true);
+        assert_eq!(actual.as_ref().unwrap().contains(&expected2), true);
+    }
+
+    #[test]
+    fn it_crafts_good_message_if_different_players_from_same_team_with_same_last_name() {
+        let highlights: Vec<String> = vec![String::from("Hughes")];
+        let goal: Goal = Goal {
+            scorer: Player {
+                first_name: String::from("Jack"),
+                last_name: String::from("Hughes"),
+                team: String::from("New Jersey"),
+            },
+            assists: vec![],
+            minute: 21,
+            special: false,
+            team: String::from("New Jersey"),
+        };
+
+        let goal2: Goal = Goal {
+            scorer: Player {
+                first_name: String::from("Quinn"),
+                last_name: String::from("Hughes"),
+                team: String::from("New Jersey"),
+            },
+            assists: vec![],
+            minute: 23,
+            special: false,
+            team: String::from("New Jersey"),
         };
 
         let expected: String = String::from("Q. Hughes 1+0");
