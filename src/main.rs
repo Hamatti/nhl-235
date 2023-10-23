@@ -528,6 +528,15 @@ fn count_stats<'a>(
     ()
 }
 
+fn has_last_name_namesake(player: &Player, stats: &HashMap<&Player, Stat>) -> bool {
+    for key in stats.keys() {
+        if key.last_name == player.last_name && key.team != player.team {
+            return true;
+        }
+    }
+    false
+}
+
 fn craft_stats_message(goals: &Vec<Goal>, highlights: &[String]) -> Option<String> {
     let mut stats: HashMap<&Player, Stat> = HashMap::new();
     count_stats(&goals, &highlights, &mut stats);
@@ -537,12 +546,22 @@ fn craft_stats_message(goals: &Vec<Goal>, highlights: &[String]) -> Option<Strin
     }
 
     let mut stats_messages: Vec<String> = Vec::new();
-    for (player, stats) in stats.iter() {
+    for (player, player_stats) in stats.iter() {
+        let needs_first_name: bool = has_last_name_namesake(*player, &stats);
+        let player_name: String = if needs_first_name {
+            format!(
+                "{}. {}",
+                &player.first_name.chars().next().unwrap(),
+                &player.last_name
+            )
+        } else {
+            String::from(&player.last_name)
+        };
         let sub_message = format!(
             "{} {}+{}",
-            &player.last_name,
-            &stats.goals.to_string(),
-            &stats.assists.to_string()
+            player_name,
+            &player_stats.goals.to_string(),
+            &player_stats.assists.to_string()
         );
         stats_messages.push(sub_message);
     }
@@ -1145,42 +1164,46 @@ mod tests {
             team: String::from("Pittsburg"),
         };
 
-        let expected: Option<String> = Some(String::from("(Malkin 1+2, Crosby 1+1)"));
+        let expected: String = String::from("Malkin 1+2");
+        let expected2: String = String::from("Crosby 1+1");
         let actual: Option<String> = craft_stats_message(&vec![goal, goal2, goal3], &highlights);
 
-        assert_eq!(actual, expected);
+        assert_eq!(actual.as_ref().unwrap().contains(&expected), true);
+        assert_eq!(actual.as_ref().unwrap().contains(&expected2), true);
     }
 
     #[test]
     fn it_crafts_good_message_if_different_players_with_same_last_name() {
-        let highlights: Vec<String> = vec![String::from("Aho")];
+        let highlights: Vec<String> = vec![String::from("Hughes")];
         let goal: Goal = Goal {
             scorer: Player {
-                first_name: String::from("Sebastian"),
-                last_name: String::from("Aho"),
-                team: String::from("Carolina"),
+                first_name: String::from("Jack"),
+                last_name: String::from("Hughes"),
+                team: String::from("New Jersey"),
             },
             assists: vec![],
             minute: 21,
             special: false,
-            team: String::from("Carolina"),
+            team: String::from("New Jersey"),
         };
 
         let goal2: Goal = Goal {
             scorer: Player {
-                first_name: String::from("Sebastian"),
-                last_name: String::from("Aho"),
-                team: String::from("NY Islanders"),
+                first_name: String::from("Quinn"),
+                last_name: String::from("Hughes"),
+                team: String::from("Vancouver"),
             },
             assists: vec![],
             minute: 23,
             special: false,
-            team: String::from("NY Islanders"),
+            team: String::from("Vancouver"),
         };
 
-        let expected: Option<String> = Some(String::from("(Aho 1+0, Aho 1+0)"));
+        let expected: String = String::from("Q. Hughes 1+0");
+        let expected2: String = String::from("J. Hughes 1+0");
         let actual: Option<String> = craft_stats_message(&vec![goal, goal2], &highlights);
 
-        assert_eq!(actual, expected);
+        assert_eq!(actual.as_ref().unwrap().contains(&expected), true);
+        assert_eq!(actual.as_ref().unwrap().contains(&expected2), true);
     }
 }
