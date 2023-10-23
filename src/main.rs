@@ -497,13 +497,15 @@ fn print_away_goal(away: &Goal, highlights: &[String], options: &Options) {
     }
 }
 
-fn count_stats(goals: &Vec<Goal>, highlights: &[String]) -> HashMap<String, Stat> {
-    let mut stats: HashMap<String, Stat> = HashMap::new();
-
+fn count_stats<'a>(
+    goals: &'a Vec<Goal>,
+    highlights: &[String],
+    stats: &mut HashMap<&'a Player, Stat>,
+) {
     goals.iter().for_each(|goal| {
         if highlights.contains(&goal.scorer.last_name) {
             stats
-                .entry(String::from(&goal.scorer.last_name))
+                .entry(&goal.scorer)
                 .and_modify(|stat| stat.goals += 1)
                 .or_insert(Stat {
                     goals: 1,
@@ -513,7 +515,7 @@ fn count_stats(goals: &Vec<Goal>, highlights: &[String]) -> HashMap<String, Stat
         goal.assists.iter().for_each(|assist| {
             if highlights.contains(&assist.last_name) {
                 stats
-                    .entry(String::from(&assist.last_name))
+                    .entry(assist)
                     .and_modify(|stat| stat.assists += 1)
                     .or_insert(Stat {
                         goals: 0,
@@ -523,21 +525,22 @@ fn count_stats(goals: &Vec<Goal>, highlights: &[String]) -> HashMap<String, Stat
         })
     });
 
-    return stats;
+    ()
 }
 
 fn craft_stats_message(goals: &Vec<Goal>, highlights: &[String]) -> Option<String> {
-    let stats: HashMap<String, Stat> = count_stats(&goals, &highlights);
+    let mut stats: HashMap<&Player, Stat> = HashMap::new();
+    count_stats(&goals, &highlights, &mut stats);
 
     if stats.is_empty() {
         return None;
     }
 
     let mut stats_messages: Vec<String> = Vec::new();
-    for (name, stats) in stats.iter() {
+    for (player, stats) in stats.iter() {
         let sub_message = format!(
             "{} {}+{}",
-            name,
+            &player.last_name,
             &stats.goals.to_string(),
             &stats.assists.to_string()
         );
@@ -1144,6 +1147,39 @@ mod tests {
 
         let expected: Option<String> = Some(String::from("(Malkin 1+2, Crosby 1+1)"));
         let actual: Option<String> = craft_stats_message(&vec![goal, goal2, goal3], &highlights);
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn it_crafts_good_message_if_different_players_with_same_last_name() {
+        let highlights: Vec<String> = vec![String::from("Aho")];
+        let goal: Goal = Goal {
+            scorer: Player {
+                first_name: String::from("Sebastian"),
+                last_name: String::from("Aho"),
+                team: String::from("Carolina"),
+            },
+            assists: vec![],
+            minute: 21,
+            special: false,
+            team: String::from("Carolina"),
+        };
+
+        let goal2: Goal = Goal {
+            scorer: Player {
+                first_name: String::from("Sebastian"),
+                last_name: String::from("Aho"),
+                team: String::from("NY Islanders"),
+            },
+            assists: vec![],
+            minute: 23,
+            special: false,
+            team: String::from("NY Islanders"),
+        };
+
+        let expected: Option<String> = Some(String::from("(Aho 1+0, Aho 1+0)"));
+        let actual: Option<String> = craft_stats_message(&vec![goal, goal2], &highlights);
 
         assert_eq!(actual, expected);
     }
