@@ -26,10 +26,9 @@ const SHOOTOUT_MINUTE: u64 = 65;
 mod api_types;
 use api_types::{APIResponse, GameResponse, GoalResponse};
 
-#[derive(Debug)]
 struct Goal {
-    scorer: String,
-    assists: Vec<String>,
+    scorer: Player,
+    assists: Vec<Player>,
     minute: u64,
     special: bool,
     team: String,
@@ -41,7 +40,13 @@ struct Stat {
     assists: u64,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Eq, Hash, PartialEq)]
+struct Player {
+    first_name: String,
+    last_name: String,
+    team: String,
+}
+
 struct Game {
     home: String,
     away: String,
@@ -285,14 +290,14 @@ fn parse_game(game_json: &GameResponse) -> Option<Game> {
                 _ => format_minute(goal.min.unwrap(), &goal.period),
             };
 
-            let scorer = extract_scorer_name(&goal.scorer.player);
+            let scorer = extract_player(&goal.scorer.player, &goal.team);
             let assists = &goal
                 .assists
                 .as_ref()
                 .unwrap_or(&Vec::new())
                 .iter()
-                .map(|assist| extract_scorer_name(&assist.player))
-                .collect::<Vec<String>>();
+                .map(|assist| extract_player(&assist.player, &goal.team))
+                .collect::<Vec<Player>>();
 
             return Goal {
                 scorer: scorer,
@@ -318,17 +323,15 @@ fn parse_game(game_json: &GameResponse) -> Option<Game> {
     Some(game)
 }
 
-/// Attempts to return player's last name
-/// by removing the first part of player's name.
-///
-/// This is not always correct since a player
-/// can have multiple first names but it's a
-/// tradeoff since we don't have data on that
-/// and full name would be too long
-fn extract_scorer_name(name: &str) -> String {
+fn extract_player(name: &str, team: &str) -> Player {
     let name = name.split(" ").collect::<Vec<&str>>();
-    let name = name[1..name.len()].to_vec();
-    name.join(" ")
+    let first_name = name[0];
+    let last_name = name[1..name.len()].to_vec().join(" ");
+    Player {
+        first_name: String::from(first_name),
+        last_name: String::from(last_name),
+        team: String::from(team),
+    }
 }
 
 fn print_game(game: &Game, highlights: &[String], options: &Options) {
@@ -434,11 +437,11 @@ fn print_game(game: &Game, highlights: &[String], options: &Options) {
 }
 
 fn print_both_goals(home: &Goal, away: &Goal, highlights: &[String], options: &Options) {
-    let home_message = format!("{:<15} {:>2} ", home.scorer, home.minute);
+    let home_message = format!("{:<15} {:>2} ", home.scorer.last_name, home.minute);
     if atty::is(Stream::Stdout) && options.use_colors {
         if home.special {
             magenta!("{}", home_message);
-        } else if options.show_highlights && highlights.contains(&home.scorer) {
+        } else if options.show_highlights && highlights.contains(&home.scorer.last_name) {
             yellow!("{}", home_message);
         } else {
             cyan!("{}", home_message);
@@ -447,11 +450,11 @@ fn print_both_goals(home: &Goal, away: &Goal, highlights: &[String], options: &O
         print!("{}", home_message);
     }
 
-    let away_message = format!("{:<15} {:>2}", away.scorer, away.minute);
+    let away_message = format!("{:<15} {:>2}", away.scorer.last_name, away.minute);
     if atty::is(Stream::Stdout) && options.use_colors {
         if away.special {
             magenta_ln!("{}", away_message);
-        } else if options.show_highlights && highlights.contains(&away.scorer) {
+        } else if options.show_highlights && highlights.contains(&away.scorer.last_name) {
             yellow_ln!("{}", away_message);
         } else {
             cyan_ln!("{}", away_message);
@@ -462,11 +465,11 @@ fn print_both_goals(home: &Goal, away: &Goal, highlights: &[String], options: &O
 }
 
 fn print_home_goal(home: &Goal, highlights: &[String], options: &Options) {
-    let message = format!("{:<15} {:>2}", home.scorer, home.minute);
+    let message = format!("{:<15} {:>2}", home.scorer.last_name, home.minute);
     if atty::is(Stream::Stdout) && options.use_colors {
         if home.special {
             magenta_ln!("{}", message);
-        } else if options.show_highlights && highlights.contains(&home.scorer) {
+        } else if options.show_highlights && highlights.contains(&home.scorer.last_name) {
             yellow_ln!("{}", message);
         } else {
             cyan_ln!("{}", message);
@@ -479,12 +482,12 @@ fn print_home_goal(home: &Goal, highlights: &[String], options: &Options) {
 fn print_away_goal(away: &Goal, highlights: &[String], options: &Options) {
     let message = format!(
         "{:<15} {:>2} {:<15} {:>2}",
-        "", "", away.scorer, away.minute
+        "", "", away.scorer.last_name, away.minute
     );
     if atty::is(Stream::Stdout) && options.use_colors {
         if away.special {
             magenta_ln!("{}", message);
-        } else if options.show_highlights && highlights.contains(&away.scorer) {
+        } else if options.show_highlights && highlights.contains(&away.scorer.last_name) {
             yellow_ln!("{}", message);
         } else {
             cyan_ln!("{}", message);
@@ -498,9 +501,9 @@ fn count_stats(goals: &Vec<Goal>, highlights: &[String]) -> HashMap<String, Stat
     let mut stats: HashMap<String, Stat> = HashMap::new();
 
     goals.iter().for_each(|goal| {
-        if highlights.contains(&goal.scorer) {
+        if highlights.contains(&goal.scorer.last_name) {
             stats
-                .entry(String::from(&goal.scorer))
+                .entry(String::from(&goal.scorer.last_name))
                 .and_modify(|stat| stat.goals += 1)
                 .or_insert(Stat {
                     goals: 1,
@@ -508,9 +511,9 @@ fn count_stats(goals: &Vec<Goal>, highlights: &[String]) -> HashMap<String, Stat
                 });
         }
         goal.assists.iter().for_each(|assist| {
-            if highlights.contains(&assist) {
+            if highlights.contains(&assist.last_name) {
                 stats
-                    .entry(String::from(assist))
+                    .entry(String::from(&assist.last_name))
                     .and_modify(|stat| stat.assists += 1)
                     .or_insert(Stat {
                         goals: 0,
@@ -857,10 +860,13 @@ mod tests {
     }
 
     #[test]
-    fn it_extracts_player_name_correctly() {
-        assert_eq!(extract_scorer_name("Olli Maatta"), String::from("Maatta"));
+    fn it_extracts_player_last_name_correctly() {
         assert_eq!(
-            extract_scorer_name("James van Riemsdyk"),
+            extract_player("Olli Maatta", "Chicago").last_name,
+            String::from("Maatta")
+        );
+        assert_eq!(
+            extract_player("James van Riemsdyk", "Philadelphia").last_name,
             String::from("van Riemsdyk")
         );
     }
@@ -869,8 +875,23 @@ mod tests {
     fn it_crafts_no_message_if_no_highlighted_players_gain_stats() {
         let highlights: Vec<String> = vec![String::from("Crosby")];
         let goal: Goal = Goal {
-            scorer: String::from("Malkin"),
-            assists: vec![String::from("Letang"), String::from("Karlsson")],
+            scorer: Player {
+                first_name: String::from("Evgeni"),
+                last_name: String::from("Malkin"),
+                team: String::from("Pittsburgh"),
+            },
+            assists: vec![
+                Player {
+                    first_name: String::from("Kris"),
+                    last_name: String::from("Letang"),
+                    team: String::from("Pittsburgh"),
+                },
+                Player {
+                    first_name: String::from("Erik"),
+                    last_name: String::from("Karlsson"),
+                    team: String::from("Pittsburgh"),
+                },
+            ],
             minute: 21,
             special: false,
             team: String::from("Pittsburg"),
@@ -886,8 +907,23 @@ mod tests {
     fn it_crafts_good_message_if_player_scored() {
         let highlights: Vec<String> = vec![String::from("Crosby")];
         let goal: Goal = Goal {
-            scorer: String::from("Crosby"),
-            assists: vec![String::from("Letang"), String::from("Karlsson")],
+            scorer: Player {
+                first_name: String::from("Sidney"),
+                last_name: String::from("Crosby"),
+                team: String::from("Pittsburgh"),
+            },
+            assists: vec![
+                Player {
+                    first_name: String::from("Kris"),
+                    last_name: String::from("Letang"),
+                    team: String::from("Pittsburgh"),
+                },
+                Player {
+                    first_name: String::from("Erik"),
+                    last_name: String::from("Karlsson"),
+                    team: String::from("Pittsburgh"),
+                },
+            ],
             minute: 21,
             special: false,
             team: String::from("Pittsburg"),
@@ -903,8 +939,23 @@ mod tests {
     fn it_crafts_good_message_if_player_gained_assist() {
         let highlights: Vec<String> = vec![String::from("Crosby")];
         let goal: Goal = Goal {
-            scorer: String::from("Malkin"),
-            assists: vec![String::from("Crosby"), String::from("Karlsson")],
+            scorer: Player {
+                first_name: String::from("Evgeni"),
+                last_name: String::from("Malkin"),
+                team: String::from("Pittsburgh"),
+            },
+            assists: vec![
+                Player {
+                    first_name: String::from("Sidney"),
+                    last_name: String::from("Crosby"),
+                    team: String::from("Pittsburgh"),
+                },
+                Player {
+                    first_name: String::from("Erik"),
+                    last_name: String::from("Karlsson"),
+                    team: String::from("Pittsburgh"),
+                },
+            ],
             minute: 21,
             special: false,
             team: String::from("Pittsburg"),
@@ -920,16 +971,39 @@ mod tests {
     fn it_crafts_good_message_if_player_gained_both_goal_and_assist() {
         let highlights: Vec<String> = vec![String::from("Crosby")];
         let goal: Goal = Goal {
-            scorer: String::from("Malkin"),
-            assists: vec![String::from("Crosby"), String::from("Karlsson")],
+            scorer: Player {
+                first_name: String::from("Evgeni"),
+                last_name: String::from("Malkin"),
+                team: String::from("Pittsburgh"),
+            },
+            assists: vec![
+                Player {
+                    first_name: String::from("Sidney"),
+                    last_name: String::from("Crosby"),
+                    team: String::from("Pittsburgh"),
+                },
+                Player {
+                    first_name: String::from("Erik"),
+                    last_name: String::from("Karlsson"),
+                    team: String::from("Pittsburgh"),
+                },
+            ],
             minute: 21,
             special: false,
             team: String::from("Pittsburg"),
         };
 
         let goal2: Goal = Goal {
-            scorer: String::from("Crosby"),
-            assists: vec![String::from("Rust")],
+            scorer: Player {
+                first_name: String::from("Sidney"),
+                last_name: String::from("Crosby"),
+                team: String::from("Pittsburgh"),
+            },
+            assists: vec![Player {
+                first_name: String::from("Brian"),
+                last_name: String::from("Rust"),
+                team: String::from("Pittsburgh"),
+            }],
             minute: 21,
             special: false,
             team: String::from("Pittsburg"),
@@ -945,16 +1019,46 @@ mod tests {
     fn it_crafts_good_message_if_player_gained_two_assists() {
         let highlights: Vec<String> = vec![String::from("Crosby")];
         let goal: Goal = Goal {
-            scorer: String::from("Malkin"),
-            assists: vec![String::from("Crosby"), String::from("Karlsson")],
+            scorer: Player {
+                first_name: String::from("Evgeni"),
+                last_name: String::from("Malkin"),
+                team: String::from("Pittsburgh"),
+            },
+            assists: vec![
+                Player {
+                    first_name: String::from("Sidney"),
+                    last_name: String::from("Crosby"),
+                    team: String::from("Pittsburgh"),
+                },
+                Player {
+                    first_name: String::from("Erik"),
+                    last_name: String::from("Karlsson"),
+                    team: String::from("Pittsburgh"),
+                },
+            ],
             minute: 21,
             special: false,
             team: String::from("Pittsburg"),
         };
 
         let goal2: Goal = Goal {
-            scorer: String::from("Malkin"),
-            assists: vec![String::from("Rust"), String::from("Crosby")],
+            scorer: Player {
+                first_name: String::from("Evgeni"),
+                last_name: String::from("Malkin"),
+                team: String::from("Pittsburgh"),
+            },
+            assists: vec![
+                Player {
+                    first_name: String::from("Brian"),
+                    last_name: String::from("Rust"),
+                    team: String::from("Pittsburgh"),
+                },
+                Player {
+                    first_name: String::from("Sidney"),
+                    last_name: String::from("Crosby"),
+                    team: String::from("Pittsburgh"),
+                },
+            ],
             minute: 21,
             special: false,
             team: String::from("Pittsburg"),
@@ -970,24 +1074,69 @@ mod tests {
     fn it_crafts_good_message_if_multiple_players_gain_points() {
         let highlights: Vec<String> = vec![String::from("Crosby"), String::from("Malkin")];
         let goal: Goal = Goal {
-            scorer: String::from("Malkin"),
-            assists: vec![String::from("Crosby"), String::from("Karlsson")],
+            scorer: Player {
+                first_name: String::from("Evgeni"),
+                last_name: String::from("Malkin"),
+                team: String::from("Pittsburgh"),
+            },
+            assists: vec![
+                Player {
+                    first_name: String::from("Sidney"),
+                    last_name: String::from("Crosby"),
+                    team: String::from("Pittsburgh"),
+                },
+                Player {
+                    first_name: String::from("Erik"),
+                    last_name: String::from("Karlsson"),
+                    team: String::from("Pittsburgh"),
+                },
+            ],
             minute: 21,
             special: false,
             team: String::from("Pittsburg"),
         };
 
         let goal2: Goal = Goal {
-            scorer: String::from("Crosby"),
-            assists: vec![String::from("Rust"), String::from("Malkin")],
+            scorer: Player {
+                first_name: String::from("Sidney"),
+                last_name: String::from("Crosby"),
+                team: String::from("Pittsburgh"),
+            },
+            assists: vec![
+                Player {
+                    first_name: String::from("Brian"),
+                    last_name: String::from("Rust"),
+                    team: String::from("Pittsburgh"),
+                },
+                Player {
+                    first_name: String::from("Evgeni"),
+                    last_name: String::from("Malkin"),
+                    team: String::from("Pittsburgh"),
+                },
+            ],
             minute: 21,
             special: false,
             team: String::from("Pittsburg"),
         };
 
         let goal3: Goal = Goal {
-            scorer: String::from("Rust"),
-            assists: vec![String::from("Letang"), String::from("Malkin")],
+            scorer: Player {
+                first_name: String::from("Brian"),
+                last_name: String::from("Rust"),
+                team: String::from("Pittsburg"),
+            },
+            assists: vec![
+                Player {
+                    first_name: String::from("Kris"),
+                    last_name: String::from("Letang"),
+                    team: String::from("Pittsburgh"),
+                },
+                Player {
+                    first_name: String::from("Evgeni"),
+                    last_name: String::from("Malkin"),
+                    team: String::from("Pittsburgh"),
+                },
+            ],
             minute: 21,
             special: false,
             team: String::from("Pittsburg"),
