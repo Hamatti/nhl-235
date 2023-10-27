@@ -52,6 +52,14 @@ To do this, you first need to create a config file to your home directory called
 235 --highlight
 ```
 
+### Show player stats for favorite players
+
+From `1.3.0` onwards, you can see your favorite players' game stats (goals + assists) by defining those players in `$HOME/.235.config` (a list of last names, one per line) and running
+
+```
+235 --stats
+```
+
 ### Current version
 
 ```
