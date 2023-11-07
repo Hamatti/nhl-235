@@ -127,7 +127,7 @@ fn read_highlight_config() -> Result<Vec<String>, StdError> {
     file.read_to_string(&mut contents)?;
 
     let highlights: Vec<String> = contents
-        .split('\n')
+        .lines()
         .map(str::to_string)
         .filter(|s| s != "")
         .collect();
