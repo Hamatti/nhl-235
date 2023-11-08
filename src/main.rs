@@ -1112,6 +1112,15 @@ mod tests {
         
     }
     #[test]
+    fn parses_unix_line_endings() {
+        let highlights: String = String::from("Crosby\nMalkin");
+        let lines = parse_highlight_config(highlights);
+        assert!(lines.is_ok());
+        assert_eq!("Crosby", lines.as_ref().unwrap().first().unwrap());
+        assert_eq!("Malkin", lines.as_ref().unwrap().last().unwrap());
+        
+    }
+    #[test]
     fn it_crafts_good_message_if_multiple_players_gain_points() {
         let highlights: Vec<String> = vec![String::from("Crosby"), String::from("Malkin")];
         let goal: Goal = Goal {
