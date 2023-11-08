@@ -126,7 +126,11 @@ fn read_highlight_config() -> Result<Vec<String>, StdError> {
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
 
-    let highlights: Vec<String> = contents
+    parse_highlight_config(contents)
+}
+
+fn parse_highlight_config(config: String) -> Result<Vec<String>, StdError>{
+    let highlights: Vec<String> = config
         .lines()
         .map(str::to_string)
         .filter(|s| s != "")
@@ -1097,6 +1101,16 @@ mod tests {
         assert_eq!(actual, expected);
     }
 
+    
+    #[test]
+    fn parses_windows_line_endings() {
+        let highlights: String = String::from("Crosby\r\nMalkin");
+        let lines = parse_highlight_config(highlights);
+        assert!(lines.is_ok());
+        assert_eq!("Crosby", lines.as_ref().unwrap().first().unwrap());
+        assert_eq!("Malkin", lines.as_ref().unwrap().last().unwrap());
+        
+    }
     #[test]
     fn it_crafts_good_message_if_multiple_players_gain_points() {
         let highlights: Vec<String> = vec![String::from("Crosby"), String::from("Malkin")];
@@ -1176,7 +1190,6 @@ mod tests {
         assert_eq!(actual.as_ref().unwrap().contains(&expected), true);
         assert_eq!(actual.as_ref().unwrap().contains(&expected2), true);
     }
-
     #[test]
     fn it_crafts_good_message_if_different_players_from_different_teams_with_same_last_name() {
         let highlights: Vec<String> = vec![String::from("Hughes")];
