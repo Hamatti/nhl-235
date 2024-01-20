@@ -22,6 +22,7 @@ use std::process;
 use structopt::StructOpt;
 
 const SHOOTOUT_MINUTE: u64 = 65;
+const WORD_WRAP_INDEX: usize = 35;
 
 mod api_types;
 use api_types::{APIResponse, GameResponse, GoalResponse};
@@ -129,7 +130,7 @@ fn read_highlight_config() -> Result<Vec<String>, StdError> {
     parse_highlight_config(contents)
 }
 
-fn parse_highlight_config(config: String) -> Result<Vec<String>, StdError>{
+fn parse_highlight_config(config: String) -> Result<Vec<String>, StdError> {
     let highlights: Vec<String> = config
         .lines()
         .map(str::to_string)
@@ -574,7 +575,19 @@ fn craft_stats_message(goals: &Vec<Goal>, highlights: &[String]) -> Option<Strin
         );
         stats_messages.push(sub_message);
     }
-    return Some(format!("({})", stats_messages.join(", ")));
+    let mut message = format!("({})", stats_messages.join(", "));
+
+    // Word wrap after the first comma
+    if message.len() > WORD_WRAP_INDEX {
+        let comma_index = message[WORD_WRAP_INDEX..]
+            .find(",")
+            .map(|i| i + WORD_WRAP_INDEX + 1)
+            .unwrap_or(0);
+        if comma_index > 0 {
+            message.insert_str(comma_index, "\n");
+        }
+    }
+    return Some(message);
 }
 
 fn print_stats(goals: &Vec<Goal>, highlights: &[String], options: &Options) {
@@ -1101,7 +1114,6 @@ mod tests {
         assert_eq!(actual, expected);
     }
 
-    
     #[test]
     fn parses_windows_line_endings() {
         let highlights: String = String::from("Crosby\r\nMalkin");
@@ -1109,7 +1121,6 @@ mod tests {
         assert!(lines.is_ok());
         assert_eq!("Crosby", lines.as_ref().unwrap().first().unwrap());
         assert_eq!("Malkin", lines.as_ref().unwrap().last().unwrap());
-        
     }
     #[test]
     fn parses_unix_line_endings() {
@@ -1118,7 +1129,6 @@ mod tests {
         assert!(lines.is_ok());
         assert_eq!("Crosby", lines.as_ref().unwrap().first().unwrap());
         assert_eq!("Malkin", lines.as_ref().unwrap().last().unwrap());
-        
     }
     #[test]
     fn it_crafts_good_message_if_multiple_players_gain_points() {
