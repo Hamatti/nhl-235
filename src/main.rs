@@ -547,6 +547,18 @@ fn has_last_name_namesake(player: &Player, stats: &HashMap<&Player, Stat>) -> bo
     false
 }
 
+fn word_wrap(message: &mut String) {
+    if message.len() > WORD_WRAP_INDEX {
+        let comma_index = message[WORD_WRAP_INDEX..]
+            .find(",")
+            .map(|i| i + WORD_WRAP_INDEX + 1)
+            .unwrap_or(0);
+        if comma_index > 0 {
+            message.insert_str(comma_index, "\n");
+        }
+    }
+}
+
 fn craft_stats_message(goals: &Vec<Goal>, highlights: &[String]) -> Option<String> {
     let mut stats: HashMap<&Player, Stat> = HashMap::new();
     count_stats(&goals, &highlights, &mut stats);
@@ -577,16 +589,7 @@ fn craft_stats_message(goals: &Vec<Goal>, highlights: &[String]) -> Option<Strin
     }
     let mut message = format!("({})", stats_messages.join(", "));
 
-    // Word wrap after the first comma
-    if message.len() > WORD_WRAP_INDEX {
-        let comma_index = message[WORD_WRAP_INDEX..]
-            .find(",")
-            .map(|i| i + WORD_WRAP_INDEX + 1)
-            .unwrap_or(0);
-        if comma_index > 0 {
-            message.insert_str(comma_index, "\n");
-        }
-    }
+    word_wrap(&mut message);
     return Some(message);
 }
 
