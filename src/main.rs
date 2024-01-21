@@ -1281,4 +1281,28 @@ mod tests {
         assert_eq!(actual.as_ref().unwrap().contains(&expected), true);
         assert_eq!(actual.as_ref().unwrap().contains(&expected2), true);
     }
+
+    #[test]
+    fn it_doesnt_wrap_short_message() {
+        let mut message = String::from("(Rantanen 2+1)");
+        word_wrap(&mut message);
+
+        let expected = String::from("(Rantanen 2+1)");
+
+        assert_eq!(message, expected);
+    }
+
+    #[test]
+    fn it_wraps_long_message_after_comma() {
+        let mut message = String::from(
+            "(MacKinnon 2+2, Ristolainen 0+1, Kiviranta 0+1, O'Connor 3+0, Rantanen 2+0)",
+        );
+        word_wrap(&mut message);
+
+        let expected = String::from(
+            "(MacKinnon 2+2, Ristolainen 0+1, Kiviranta 0+1,\n O'Connor 3+0, Rantanen 2+0)",
+        );
+
+        assert_eq!(message, expected);
+    }
 }
