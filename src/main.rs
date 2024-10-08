@@ -176,7 +176,6 @@ fn translate_team_name(abbr: &str) -> String {
         "NSH" => "Nashville",
         "TBL" => "Tampa Bay",
         "ANA" => "Anaheim",
-        "ARI" => "Arizona",
         "COL" => "Colorado",
         "LAK" => "Los Angeles",
         "MIN" => "Minnesota",
@@ -191,6 +190,7 @@ fn translate_team_name(abbr: &str) -> String {
         "VAN" => "Vancouver",
         "WPG" => "Winnipeg",
         "SEA" => "Seattle",
+        "UTA" => "Utah",
         _ => "[unknown]",
     };
 
