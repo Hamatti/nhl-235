@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.1 - 2024-12-11
+
+### Fixed
+
+- Fixed a bug that calculated shootout goals to player's goal stat when using `--stat`
+
 ## 1.4.0 - 2024-10-08
 
 ### Changed

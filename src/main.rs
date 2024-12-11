@@ -129,7 +129,7 @@ fn read_highlight_config() -> Result<Vec<String>, StdError> {
     parse_highlight_config(contents)
 }
 
-fn parse_highlight_config(config: String) -> Result<Vec<String>, StdError>{
+fn parse_highlight_config(config: String) -> Result<Vec<String>, StdError> {
     let highlights: Vec<String> = config
         .lines()
         .map(str::to_string)
@@ -507,6 +507,9 @@ fn count_stats<'a>(
     stats: &mut HashMap<&'a Player, Stat>,
 ) {
     goals.iter().for_each(|goal| {
+        if goal.minute == 65 {
+            return;
+        }
         if highlights.contains(&goal.scorer.last_name) {
             stats
                 .entry(&goal.scorer)
@@ -1101,7 +1104,6 @@ mod tests {
         assert_eq!(actual, expected);
     }
 
-    
     #[test]
     fn parses_windows_line_endings() {
         let highlights: String = String::from("Crosby\r\nMalkin");
@@ -1109,7 +1111,6 @@ mod tests {
         assert!(lines.is_ok());
         assert_eq!("Crosby", lines.as_ref().unwrap().first().unwrap());
         assert_eq!("Malkin", lines.as_ref().unwrap().last().unwrap());
-        
     }
     #[test]
     fn parses_unix_line_endings() {
@@ -1118,7 +1119,6 @@ mod tests {
         assert!(lines.is_ok());
         assert_eq!("Crosby", lines.as_ref().unwrap().first().unwrap());
         assert_eq!("Malkin", lines.as_ref().unwrap().last().unwrap());
-        
     }
     #[test]
     fn it_crafts_good_message_if_multiple_players_gain_points() {
@@ -1267,5 +1267,38 @@ mod tests {
 
         assert_eq!(actual.as_ref().unwrap().contains(&expected), true);
         assert_eq!(actual.as_ref().unwrap().contains(&expected2), true);
+    }
+
+    #[test]
+    fn it_doesnt_count_shootout_goals_to_stats() {
+        let highlights: Vec<String> = vec![String::from("Barkov")];
+        let goal: Goal = Goal {
+            scorer: Player {
+                first_name: String::from("Alexander"),
+                last_name: String::from("Barkov"),
+                team: String::from("Florida"),
+            },
+            assists: vec![],
+            minute: 21,
+            special: false,
+            team: String::from("Florida"),
+        };
+
+        let goal2: Goal = Goal {
+            scorer: Player {
+                first_name: String::from("Alexander"),
+                last_name: String::from("Barkov"),
+                team: String::from("Florida"),
+            },
+            assists: vec![],
+            minute: 65,
+            special: false,
+            team: String::from("Florida"),
+        };
+
+        let expected: String = String::from("Barkov 1+0");
+        let actual: Option<String> = craft_stats_message(&vec![goal, goal2], &highlights);
+
+        assert_eq!(actual.as_ref().unwrap().contains(&expected), true);
     }
 }
