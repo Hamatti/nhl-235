@@ -83,3 +83,7 @@ Development of 235 has been a grateful recipient of the [Futurice Open Source sp
 ### YLE Tekstitv
 
 None of this would exist without the cultural importance of [YLE's teletext](https://yle.fi/aihe/tekstitv) and the page 235 has had in Finnish hockey fan culture.
+
+### Liiga teletext
+
+If you're a fan of Finnish Hockey League (Liiga), check out Niko's wonderful [liiga_teletext](https://crates.io/crates/liiga_teletext)
